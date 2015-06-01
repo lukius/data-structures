@@ -113,7 +113,7 @@ class BlockRMQ : public RMQ<T>
               current_min = std::min(left_block_min, right_block_min);
             
             for(size_t k = i_block+1; k < j_block; ++k)
-                 current_min = std::min(current_min, this->min_on_block(k));
+                 current_min = std::min(current_min, this->block_mins[k]);
 
             return current_min;
         };
