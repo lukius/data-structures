@@ -65,7 +65,7 @@ class FullyPrecomputedRMQ : public RMQ<T>
 
         virtual T operator()(size_t i, size_t j) const
         {
-            assert(i <= j && j < this->A.size());
+            assert(i <= j && j < this->n);
             
             return this->mins[i][j-i];
         };
@@ -103,7 +103,7 @@ class BlockRMQ : public RMQ<T>
 
         virtual T operator()(size_t i, size_t j) const
         {
-            assert(i <= j && j < this->A.size());
+            assert(i <= j && j < this->n);
             
             size_t i_block = block_idx(i),
                    j_block = block_idx(j);
