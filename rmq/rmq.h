@@ -34,8 +34,7 @@ class NaiveRMQ : public RMQ<T>
             
             T min = this->A[i];
             for(size_t k = i+1; k <= j; ++k)
-                if(this->A[k] < min)
-                    min = this->A[k];
+                min = std::min(min, this->A[k]);
 
             return min; 
         };
