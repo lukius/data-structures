@@ -119,4 +119,40 @@ class BlockRMQ : public RMQ<T>
         };
 };
 
+
+template<class T>
+class SparseTableRMQ : public RMQ<T>
+{
+    #define floor_log(i,j) (int(floor(log2(j-i+1))))
+
+    private:
+        std::vector<std::vector<T> > mins;
+
+    public:
+        SparseTableRMQ(const std::vector<T> &A) : RMQ<T>(A)
+        {
+            this->mins.resize(this->n);
+            
+            for(size_t i = 0; i < this->n; ++i)
+            {
+                this->mins[i].resize(floor_log(i, this->n));
+                this->mins[i][0] = this->A[i];
+            }
+
+            for(size_t j = 1; (1 << j) < this->n; ++j)
+                for(size_t i = 0; (i + (1 << j) - 1) < this->n; ++i)
+                    this->mins[i][j] = std::min(this->mins[i][j-1],
+                                                this->mins[i + (1 << (j-1))][j-1]);
+        };
+
+        virtual T operator()(size_t i, size_t j) const
+        {
+            assert(i <= j && j < this->n);
+            
+            size_t k = floor_log(i, j);
+            return std::min(this->mins[i][k],
+                            this->mins[j - (1 << k) + 1][k]);
+        };
+};
+
 #endif

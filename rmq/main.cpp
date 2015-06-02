@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
     NaiveRMQ<int> naive_rmq(A);
     FullyPrecomputedRMQ<int> full_rmq(A);
     BlockRMQ<int> block_rmq(A); 
+    SparseTableRMQ<int> sparse_rmq(A);
 
     assert(naive_rmq(0,9) == -10);
     assert(naive_rmq(2,2) == 22);
@@ -26,4 +27,9 @@ int main(int argc, char *argv[])
     assert(block_rmq(2,2) == 22);
     assert(block_rmq(1,4) == 14);
     assert(block_rmq(7,9) == 23);
+
+    assert(sparse_rmq(0,9) == -10);
+    assert(sparse_rmq(2,2) == 22);
+    assert(sparse_rmq(1,4) == 14);
+    assert(sparse_rmq(7,9) == 23);
 }

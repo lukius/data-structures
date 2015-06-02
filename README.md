@@ -5,3 +5,4 @@
      * Solución naive
      * Precomputando todos los mínimos
      * Descomposición en bloques
+     * Con tabla dispersa
