@@ -83,18 +83,19 @@ class BlockRMQ : public RMQ<T>
 
     private:
         std::vector<T> block_mins;
+        size_t block_size;
 
         T min_on_block(size_t i, size_t from=0, ssize_t to=-1) const
         {
             T current_min = this->A[idx(i,from)];
-            to = to >= 0 ? to : BLOCK_SIZE;
+            to = to >= 0 ? to : this->block_size;
             for(size_t j = from+1; j < to; ++j)
                 current_min = std::min(current_min, this->A[idx(i,j)]);
             return current_min;
         };
 
     public:
-        BlockRMQ(const std::vector<T> &A) : RMQ<T>(A)
+        BlockRMQ(const std::vector<T> &A) : RMQ<T>(A), block_size(BLOCK_SIZE)
         {
             this->block_mins.resize(NUM_BLOCKS);
             for(size_t i = 0; i < NUM_BLOCKS; ++i)
@@ -108,7 +109,7 @@ class BlockRMQ : public RMQ<T>
             size_t i_block = block_idx(i),
                    j_block = block_idx(j);
 
-            T left_block_min = this->min_on_block(i_block, offset(i), BLOCK_SIZE),
+            T left_block_min = this->min_on_block(i_block, offset(i), this->block_size),
               right_block_min = this->min_on_block(j_block, 0, offset(j)),
               current_min = std::min(left_block_min, right_block_min);
             
@@ -123,19 +124,36 @@ class BlockRMQ : public RMQ<T>
 template<class T>
 class SparseTableRMQ : public RMQ<T>
 {
-    #define floor_log(i,j) (int(floor(log2(j-i+1))))
-
+    #define log_interval(i,j) (this->logs[j-i+1])
+    
     private:
         std::vector<std::vector<T> > mins;
+        std::vector<int> logs;
 
+        void compute_logs()
+        {
+            this->logs.resize(this->n+2);
+            int current_log = -1, current_pow = 1;
+            for(size_t i = 1; i <= 1+this->n; ++i)
+            {
+                if(i == current_pow)
+                {
+                    current_log++;
+                    current_pow <<= 1;
+                }
+                this->logs[i] = current_log;
+            }
+        };
+        
     public:
         SparseTableRMQ(const std::vector<T> &A) : RMQ<T>(A)
         {
             this->mins.resize(this->n);
+            this->compute_logs();
             
             for(size_t i = 0; i < this->n; ++i)
             {
-                this->mins[i].resize(floor_log(i, this->n));
+                this->mins[i].resize(log_interval(i, this->n));
                 this->mins[i][0] = this->A[i];
             }
 
@@ -149,7 +167,7 @@ class SparseTableRMQ : public RMQ<T>
         {
             assert(i <= j && j < this->n);
             
-            size_t k = floor_log(i, j);
+            size_t k = log_interval(i, j);
             return std::min(this->mins[i][k],
                             this->mins[j - (1 << k) + 1][k]);
         };
