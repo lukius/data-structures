@@ -18,6 +18,10 @@ class vEBTree
     size_t child_index(int) const;
     int child_value(int) const;
 
+    void _insert(int);
+    void _erase(int);
+    bool _contains(int) const;
+
 public:
     vEBTree(int);
     vEBTree(const vEBTree&) { /* TODO */ };

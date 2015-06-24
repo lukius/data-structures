@@ -43,6 +43,33 @@ int vEBTree::child_value(int value) const
     return value % this->children.size();
 }
 
+void vEBTree::_insert(int value)
+{
+    // Recursively insert the given value into the appropriate child.
+
+    size_t index = this->child_index(value);
+    int child_value = this->child_value(value);
+    this->children[index]->insert(child_value);
+}
+
+void vEBTree::_erase(int value)
+{
+    // Recursively remove the given value from the appropriate child.
+
+    size_t index = this->child_index(value);
+    int child_value = this->child_value(value);
+    this->children[index]->erase(child_value);
+}
+
+bool vEBTree::_contains(int value) const
+{
+    // Recursively check whether the given value is contained into the appropriate child.
+
+    size_t index = this->child_index(value);
+    int child_value = this->child_value(value);
+    return this->children[index]->contains(child_value);
+}
+
 void vEBTree::insert(int value)
 {
     if(this->is_empty())
@@ -52,16 +79,21 @@ void vEBTree::insert(int value)
         return;
     }
 
-    if(value <= *this->min || value >= *this->max)
+    if(value <= *this->min)
     {
-        if(value <= *this->min) *this->min = value;
-        if(value >= *this->max) *this->max = value;
+        this->_insert(*this->min);
+        *this->min = value;
         return;
     }
 
-    size_t index = this->child_index(value);
-    int child_value = this->child_value(value);
-    this->children[index]->insert(child_value);
+    if(value >= *this->max)
+    {
+        this->_insert(*this->max);
+        *this->max = value;
+        return;
+    }
+
+    this->_insert(value);
 }
 
 void vEBTree::erase(int value)
@@ -80,9 +112,7 @@ bool vEBTree::contains(int value) const
     if(value == *this->min || value == *this->max)
         return true;
 
-    size_t index = this->child_index(value);
-    int child_value = this->child_value(value);
-    return this->children[index]->contains(child_value);
+    return this->_contains(value);
 }
 
 bool vEBTree::is_empty() const
