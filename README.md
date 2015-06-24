@@ -6,3 +6,4 @@
      * Precomputando todos los mínimos
      * Descomposición en bloques
      * Con tabla dispersa
+   * van Emde Boas trees
