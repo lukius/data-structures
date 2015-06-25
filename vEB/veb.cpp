@@ -61,11 +61,14 @@ void vEBTree::_erase(int value)
     size_t index = this->child_index(value);
     int child_value = this->child_value(value);
     this->children[index]->erase(child_value);
+    if(this->children[index]->is_empty())
+        this->summary->erase(index);
 }
 
 bool vEBTree::_contains(int value) const
 {
-    // Recursively check whether the given value is contained into the appropriate child.
+    // Recursively check whether the given value is contained into
+    // the appropriate child.
 
     size_t index = this->child_index(value);
     int child_value = this->child_value(value);
@@ -74,6 +77,7 @@ bool vEBTree::_contains(int value) const
 
 void vEBTree::insert(int value)
 {
+    // Case 1 (trivial): insert first value.
     if(this->is_empty())
     {
         this->min = new int(value);
@@ -81,14 +85,18 @@ void vEBTree::insert(int value)
         return;
     }
 
+    // Case 2: insert a new minimum.
     if(value <= *this->min)
     {
+        // Important: recursively insert the former minimum into
+        // the tree, only if it is different from the maximum.
         if(*this->min != *this->max)
             this->_insert(*this->min);
         *this->min = value;
         return;
     }
 
+    // Case 3: insert a new maximum.
     if(value >= *this->max)
     {
         if(*this->max != *this->min)
@@ -97,12 +105,73 @@ void vEBTree::insert(int value)
         return;
     }
 
+    // Case 4: insert any other value recursively.
     this->_insert(value);
 }
 
 void vEBTree::erase(int value)
 {
+    // Precondition: tree must not be empty.
+    // Also, value should be stored in the tree.
     assert(!this->is_empty());
+
+    // Trivial case: tree has only one element.
+    if(value == *this->min && value == *this->max)
+    {
+        delete this->min;
+        delete this->max;
+        this->min = NULL;
+        this->max = NULL;
+        return;
+    }
+
+    // Delete the minimum. For this, we have to find the successor.
+    // It is important not to call successor(value) in order to
+    // keep O(log log n) time complexity (doing that will instead
+    // increase this bound to O(log n)).
+    if(value == *this->min)
+    {
+        int new_min;
+
+        // These cases are analogous to subcases of case 2 of
+        // the successor method.
+        if(this->summary->is_empty())
+            new_min = *this->max;
+        else
+        {
+            new_min = (*this->summary->min * this->block_size) +
+                      *this->children[*this->summary->min]->min;
+            // It is important to erase this value from the tree, 
+            // since it will be now stored separately.
+            this->_erase(new_min);
+        }
+    
+        // Finally, update minimum and return.
+        *this->min = new_min;
+        return;
+    }
+
+    // Delete the maximum. Analogous to previous case (comments on
+    /// predecessor method might also help).
+    if(value == *this->max)
+    {
+        int new_max;
+
+        if(this->summary->is_empty())
+            new_max = *this->min;
+        else
+        {
+            new_max = (*this->summary->max * this->block_size) +
+                      *this->children[*this->summary->max]->max;
+            this->_erase(new_max);
+        }
+    
+        *this->max = new_max;
+        return;
+    }
+
+    // Erase any other value recursively.
+    this->_erase(value);
 }
 
 bool vEBTree::contains(int value) const
@@ -127,11 +196,11 @@ bool vEBTree::is_empty() const
 
 int vEBTree::successor(int value) const
 {
-    // Tree must not be empty and the value has to be less than the maximum
-    // currently stored.
+    // Precondition: tree must not be empty and the value has to
+    // be less than the maximum currently stored.
     assert(!this->is_empty() && value < *this->max);
 
-    // Trivial case: the value is less than the minimum.
+    // Case 1: the value is less than the minimum (trivial case).
     if(value < *this->min)
         return *this->min;
 
@@ -142,10 +211,10 @@ int vEBTree::successor(int value) const
     // Seek the successor of the minimum.
     if(value == *this->min)
     {
-        // Case 1: tree contains no other value except from min and max.
+        // Case 2a: tree contains no other value except from min and max.
         if(this->summary->is_empty())
             return *this->max;
-        // Case 2: tree contains additional values. Thus, the answer is
+        // Case 2b: tree contains additional values. Thus, the answer is
         // the minimum value stored in the minimum block. We have to be
         // careful and add the appropriate offset in order to give the
         // correct answer.
@@ -155,17 +224,17 @@ int vEBTree::successor(int value) const
     }
 
     // Search the successor of any value != min.
-    // Case 1: the successor exists in the same block.
-    if(child_value < *this->children[index]->max)
+    // Case 3a: the successor exists in the same block.
+    if(this->children[index]->max && child_value < *this->children[index]->max)
         return offset + this->children[index]->successor(child_value);
-    // Case 2: the successor appears in the next nonempty block.
-    else if(index < *this->summary->max)
+    // Case 3b: the successor appears in the next nonempty block.
+    else if(this->summary->max && (int)index < *this->summary->max)
     {
         int successor_block = this->summary->successor(index);
         return offset + this->block_size +
                *this->children[successor_block]->min;        
     }
-    // Case 3: no nonempty blocks remaining. Return max.
+    // Case 3c: no nonempty blocks remaining. Return max.
     else return *this->max;
 }
 
@@ -191,9 +260,9 @@ int vEBTree::predecessor(int value) const
                    *this->children[*this->summary->max]->max;
     }
 
-    if(child_value > *this->children[index]->min)
+    if(this->children[index]->min && child_value > *this->children[index]->min)
         return offset + this->children[index]->predecessor(child_value);
-    else if(index > *this->summary->min)
+    else if(this->summary->min && (int)index > *this->summary->min)
     {
         int predecessor_block = this->summary->predecessor(index);
         return offset - this->block_size +
