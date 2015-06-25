@@ -22,7 +22,6 @@ int main(int argc, char *argv[])
     assert(!t.contains(10));
     assert(t.get_min() == 5);
     assert(t.get_max() == 27);
-    /*
     assert(t.successor(5) == 27);
     assert(t.predecessor(27) == 5);
     
@@ -50,8 +49,9 @@ int main(int argc, char *argv[])
     assert(t.successor(5) == 15);
     assert(t.successor(15) == 16);
     assert(t.successor(16) == 27);
+    assert(t.predecessor(16) == 15);
     assert(t.predecessor(27) == 16);
-
+/*
     t.erase(27);
     assert(!t.is_empty());
     assert(t.contains(5));
