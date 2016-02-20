@@ -11,7 +11,7 @@ vector<int> A({45, 53, 22, 14, 17, 28, -10, 23, 72, 82});
 
 TEST(RMQTest, naive_rmq_test)
 {
-    NaiveRMQ<int> naive_rmq(A);
+	NaiveRMQ<int> naive_rmq(A);
 
     EXPECT_EQ(naive_rmq(0,9), -10);
     EXPECT_EQ(naive_rmq(2,2), 22);
