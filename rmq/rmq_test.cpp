@@ -5,8 +5,6 @@
 using namespace std;
 
 
-class RMQTest : public testing::Test {};
-
 vector<int> A({45, 53, 22, 14, 17, 28, -10, 23, 72, 82});
 
 TEST(RMQTest, naive_rmq_test)

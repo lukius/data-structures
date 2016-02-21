@@ -6,6 +6,7 @@ do
     then
         cd $dir;
         echo "Compiling ${dir} tests...";
+        make clean;
         make test;
         ./$dir;
         cd ..;
