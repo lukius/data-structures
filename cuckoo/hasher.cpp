@@ -2,12 +2,14 @@
 #include <random>
 
 
-Hasher::Hasher(ulong w, ulong q) : w(w), q(q)
+Hasher::Hasher(ulong w) : w(w)
 {
 	std::random_device rd;
 
 	this->mt = new std::mt19937(rd());
-	this->d = new std::uniform_int_distribution<>(1, 1<<w);
+	this->d = new std::uniform_int_distribution<>(1, (1<<w) - 1);
+
+	this->q = (*this->d)(*this->mt);
 
 	this->update();
 }
