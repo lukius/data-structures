@@ -8,11 +8,11 @@
 
 #define EPSILON 7/5.
 
-#define LOG_E(x) (std::log(x)/std::log(1+EPSILON))
-#define MAX_LOOP	 		((int)ceil(3*LOG_E(this->T_1.size())))
+#define MAX_LOOP	 		((int)ceil(3*LOG(this->T_1.size(), EPSILON)))
 #define MAX_LOAD_FACTOR		(1./(1 + EPSILON))
 
 #define INITIAL_SIZE 2
+
 
 template<class T, class H>
 class _CuckooHashTable
@@ -42,9 +42,12 @@ public:
 
 	void insert(const T&);
 	void remove(const T&);
+
 	bool is_empty() const;
+
 	bool contains(const T&) const;
 	const T *lookup(const T&) const;
+
 	std::vector<const T*> items() const;
 
 	const _CuckooHashTable &operator=(const _CuckooHashTable&);
@@ -113,7 +116,7 @@ void _CuckooHashTable<T, H>::erase()
 template<class T, class H>
 double _CuckooHashTable<T, H>::load_factor() const
 {
-	return double(this->size) / this->T_1.size();
+	return double(this->size) / (2*this->T_1.size());
 }
 
 template<class T, class H>
@@ -160,17 +163,15 @@ void _CuckooHashTable<T, H>::do_insert(const T& key)
 {
 	size_t h1, h2;
 
-	T *kicked_out, *value, *k = new T(key);
+	T *kicked_out, *value = new T(key);
 
 	bool inserted = false;
 
 	while( !inserted )
 	{
-		value = k;
-
 		// First check if the key is already stored.
 		// If so, update its value and stop.
-		if( this->set_if_present(value, key) )
+		if( this->set_if_present(value, *value) )
 			return;
 
 		for(int i = 0; i < MAX_LOOP; ++i)
@@ -198,8 +199,11 @@ void _CuckooHashTable<T, H>::do_insert(const T& key)
 				break;
 			}
 
-			// Otherwise, we have to loop.
-			value = kicked_out;
+			// Otherwise, we have to loop after kicking out the item on
+			// T_2[h2].
+			value = new T(*this->T_2[h2]);
+			delete this->T_2[h2];
+			this->T_2[h2] = kicked_out;
 		}
 
 		if( !inserted )
@@ -212,7 +216,8 @@ void _CuckooHashTable<T, H>::do_insert(const T& key)
 template<class T, class H>
 void _CuckooHashTable<T, H>::remove(const T& key)
 {
-	this->set_if_present(NULL, key);
+	if( this->set_if_present(NULL, key) )
+		this->size--;
 }
 
 template<class T, class H>
@@ -268,7 +273,21 @@ template<class T, class H>
 std::vector<const T*> _CuckooHashTable<T, H>::items() const
 {
 	std::vector<const T*> items;
-	// TODO
+
+	typename std::vector<const T*>::const_iterator it;
+
+	for(it = this->T_1.begin(); it != this->T_1.end(); it++ )
+	{
+		const T *key = *it;
+		if( key )
+			items.push_back(key);
+	}
+	for(it = this->T_2.begin(); it != this->T_2.end(); it++ )
+	{
+		const T *key = *it;
+		if( key )
+			items.push_back(key);
+	}
 
 	return items;
 }

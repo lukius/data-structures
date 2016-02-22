@@ -5,14 +5,14 @@
 
 typedef unsigned long ulong;
 
+#define LOG(x, b) (std::log(x)/std::log(b))
+
 
 class Hasher
 {
 	// Implementation of the 2-universal hash family presented in the paper.
 
 private:
-	ulong w;
-
 	std::mt19937 *mt;
 	std::uniform_int_distribution<> *d;
 
@@ -21,7 +21,7 @@ private:
 
 protected:
 	// Just to be able to test this class' behavior.
-	ulong q, a1, a2, a3;
+	ulong w, q, a1, a2, a3;
 
 public:
 	Hasher(ulong w);
@@ -36,6 +36,8 @@ public:
 	// these cases.
 	size_t hash(const std::string&) const;
 	size_t hash(const char*, size_t) const;
+
+	const Hasher& operator=(const Hasher&);
 };
 
 #endif

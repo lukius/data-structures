@@ -1,5 +1,6 @@
 #include "hasher.h"
 #include <random>
+#include <math.h>
 
 
 Hasher::Hasher(ulong w) : w(w)
@@ -7,9 +8,10 @@ Hasher::Hasher(ulong w) : w(w)
 	std::random_device rd;
 
 	this->mt = new std::mt19937(rd());
-	this->d = new std::uniform_int_distribution<>(1, (1<<w) - 1);
+	this->d = new std::uniform_int_distribution<>(1, w - 1);
 
-	this->q = (*this->d)(*this->mt);
+	ulong n = (*this->d)(*this->mt);
+	this->q = (ulong)LOG(w,2) - (ulong)LOG(n,2);
 
 	this->update();
 }
@@ -29,11 +31,9 @@ void Hasher::update()
 
 ulong Hasher::rand_odd() const
 {
-	ulong n;
-
-	do
-		n = (*this->d)(*this->mt);
-	while((n&0x1) == 0);
+	ulong n = (*this->d)(*this->mt);
+	if( (n&0x1) == 0 )
+		n++;
 
 	return n;
 }
@@ -41,8 +41,8 @@ ulong Hasher::rand_odd() const
 ulong Hasher::hash_with(ulong a, ulong x) const
 {
 	x *= a;
-	x &= (1 << (this->w+1)) - 1;
-	x >>= this->w - this->q;
+	x &= this->w - 1;
+	x >>= this->q;
 	return x;
 }
 
@@ -70,4 +70,25 @@ size_t Hasher::hash(const char *bytes, size_t size) const
 		h += this->hash((ulong)bytes[i]);
 
 	return this->hash(h);
+}
+
+const Hasher& Hasher::operator=(const Hasher& h)
+{
+	if( this != &h )
+	{
+		delete this->d;
+		delete this->mt;
+
+		std::random_device rd;
+		this->mt = new std::mt19937(rd());
+		this->d = new std::uniform_int_distribution<>(1, h.w-1);
+
+		this->w = h.w;
+		this->q = h.q;
+		this->a1 = h.a1;
+		this->a2 = h.a2;
+		this->a3 = h.a3;
+	}
+
+	return *this;
 }
