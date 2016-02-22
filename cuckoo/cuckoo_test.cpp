@@ -130,15 +130,23 @@ TEST_F(CuckooHashTableTest, deletion_test)
 TEST_F(CuckooHashTableTest, several_insertions_and_deletions_test)
 {
 	for(int n = 0; n < 1000; n++)
+	{
 		this->T->insert(n);
+		EXPECT_EQ(this->T->size(), n+1);
+	}
 
 	EXPECT_FALSE(this->T->is_empty());
 
 	for(int n = 0; n < 1000; n++)
 		EXPECT_TRUE(this->T->contains(n));
 
+	size_t size = this->T->size();
 	for(int n = 500; n < 1000; n++)
+	{
 		this->T->remove(n);
+		size--;
+		EXPECT_EQ(this->T->size(), size);
+	}
 
 	for(int n = 0; n < 1000; n++)
 		EXPECT_TRUE(n < 500 ? this->T->contains(n) : !this->T->contains(n));
@@ -146,11 +154,15 @@ TEST_F(CuckooHashTableTest, several_insertions_and_deletions_test)
 	for(int n = 0; n < 1000; n++)
 		this->T->insert(n);
 
+	EXPECT_EQ(this->T->size(), 1000);
+
 	for(int n = 0; n < 1000; n++)
 		EXPECT_TRUE(this->T->contains(n));
 
 	_CuckooHashTable<int, NonRandomHasher> S;
 	S = *this->T;
+
+	EXPECT_EQ(S.size(), 1000);
 
 	for(int n = 0; n < 1000; n++)
 		EXPECT_TRUE(S.contains(n));

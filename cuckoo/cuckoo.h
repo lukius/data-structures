@@ -23,7 +23,7 @@ class _CuckooHashTable
 private:
 	std::vector<const T*> T_1, T_2;
 	H h_1, h_2;
-	size_t size;
+	size_t _size;
 
 	_CuckooHashTable(size_t);
 
@@ -45,6 +45,8 @@ public:
 
 	bool is_empty() const;
 
+	size_t size() const;
+
 	bool contains(const T&) const;
 	const T *lookup(const T&) const;
 
@@ -56,7 +58,7 @@ public:
 
 template<class T, class H>
 _CuckooHashTable<T, H>::_CuckooHashTable() :
-	_CuckooHashTable(INITIAL_SIZE)
+_CuckooHashTable(INITIAL_SIZE)
 {
 }
 
@@ -66,7 +68,7 @@ _CuckooHashTable<T, H>::_CuckooHashTable(size_t size) :
 	T_2(size),
 	h_1(H(size)),
 	h_2(H(size)),
-	size(0)
+	_size(0)
 {
 	for(size_t i = 0; i < this->T_1.size(); ++i)
 	{
@@ -94,7 +96,7 @@ void _CuckooHashTable<T, H>::copy_from(const _CuckooHashTable &h)
 {
 	this->h_1 = h.h_1;
 	this->h_2 = h.h_2;
-	this->size = h.size;
+	this->_size = h._size;
 
 	for(size_t i = 0; i < this->T_1.size(); ++i)
 	{
@@ -116,7 +118,7 @@ void _CuckooHashTable<T, H>::erase()
 template<class T, class H>
 double _CuckooHashTable<T, H>::load_factor() const
 {
-	return double(this->size) / (2*this->T_1.size());
+	return double(this->_size) / (2*this->T_1.size());
 }
 
 template<class T, class H>
@@ -133,13 +135,13 @@ void _CuckooHashTable<T, H>::rehash()
 
 	typename std::vector<const T*>::iterator it;
 
-	for(it = this->T_1.begin(); it != this->T_1.end(); it++ )
+	for( it = this->T_1.begin(); it != this->T_1.end(); it++ )
 	{
 		const T *key = *it;
 		if( key )
 			new_table.insert(*key);
 	}
-	for(it = this->T_2.begin(); it != this->T_2.end(); it++ )
+	for( it = this->T_2.begin(); it != this->T_2.end(); it++ )
 	{
 		const T *key = *it;
 		if( key )
@@ -153,9 +155,9 @@ template<class T, class H>
 void _CuckooHashTable<T, H>::insert(const T& key)
 {
 	if( this->load_factor() >= MAX_LOAD_FACTOR )
-        this->rehash();
+		this->rehash();
 
-    this->do_insert(key);
+	this->do_insert(key);
 }
 
 template<class T, class H>
@@ -210,14 +212,14 @@ void _CuckooHashTable<T, H>::do_insert(const T& key)
 			this->rehash();
 	}
 
-	this->size++;
+	this->_size++;
 }
 
 template<class T, class H>
 void _CuckooHashTable<T, H>::remove(const T& key)
 {
 	if( this->set_if_present(NULL, key) )
-		this->size--;
+		this->_size--;
 }
 
 template<class T, class H>
@@ -266,7 +268,13 @@ const T *_CuckooHashTable<T, H>::lookup(const T& key) const
 template<class T, class H>
 bool _CuckooHashTable<T, H>::is_empty() const
 {
-	return this->size == 0;
+	return this->_size == 0;
+}
+
+template<class T, class H>
+size_t _CuckooHashTable<T, H>::size() const
+{
+	return this->_size;
 }
 
 template<class T, class H>
