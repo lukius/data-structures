@@ -7,4 +7,4 @@
      * Block decomposition
      * Sparse table
    * [van Emde Boas trees](https://en.wikipedia.org/wiki/Van_Emde_Boas_tree)
-   * [Cuckoo hash tables](https://en.wikipedia.org/wiki/Cuckoo_hashing) (in progress)
+   * [Cuckoo hash tables](https://en.wikipedia.org/wiki/Cuckoo_hashing)
