@@ -131,8 +131,8 @@ template<class T, class H>
 void _CuckooHashTable<T, H>::rehash(bool should_resize)
 {
 	size_t new_table_size = should_resize ?
-							this->new_table_size() :
-							this->_size;
+				this->new_table_size() :
+				this->_size;
 
 	_CuckooHashTable new_table(new_table_size);
 
