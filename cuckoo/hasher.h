@@ -14,7 +14,7 @@ class Hasher
 
 private:
 	std::mt19937 *mt;
-	std::uniform_int_distribution<> *d;
+	std::uniform_int_distribution<ulong> *d;
 
 	ulong rand_odd() const;
 	ulong hash_with(ulong, ulong) const;

@@ -2,16 +2,20 @@
 #include <random>
 #include <math.h>
 
+#define W (std::numeric_limits<ulong>::max())
+
 
 Hasher::Hasher(ulong w) : w(w)
 {
 	std::random_device rd;
 
 	this->mt = new std::mt19937(rd());
-	this->d = new std::uniform_int_distribution<>(1, w - 1);
+	this->d = new std::uniform_int_distribution<ulong>(1,  W-1);
 
-	ulong n = (*this->d)(*this->mt);
-	this->q = (ulong)LOG(w,2) - (ulong)LOG(n,2);
+	int M = std::numeric_limits<int>::max();
+	std::uniform_int_distribution<int> d(1,  M);
+	ulong n = d(*this->mt);
+	this->q = (ulong)LOG(W,2) - (ulong)LOG(n,2);
 
 	this->update();
 }
@@ -41,7 +45,6 @@ ulong Hasher::rand_odd() const
 ulong Hasher::hash_with(ulong a, ulong x) const
 {
 	x *= a;
-	x &= this->w - 1;
 	x >>= this->q;
 	return x;
 }
@@ -52,7 +55,7 @@ size_t Hasher::hash(ulong key) const
     ulong h2 = this->hash_with(this->a2, key);
     ulong h3 = this->hash_with(this->a3, key);
 
-    return h1 ^ h2 ^ h3;
+    return (h1 ^ h2 ^ h3) % this->w;
 }
 
 size_t Hasher::hash(const std::string &str) const
@@ -81,7 +84,7 @@ const Hasher& Hasher::operator=(const Hasher& h)
 
 		std::random_device rd;
 		this->mt = new std::mt19937(rd());
-		this->d = new std::uniform_int_distribution<>(1, h.w-1);
+		this->d = new std::uniform_int_distribution<ulong>(1, W-1);
 
 		this->w = h.w;
 		this->q = h.q;

@@ -5,7 +5,7 @@ H_FILES=$(wildcard *.h)
 
 CC=g++
 RM=rm -rf
-CFLAGS=-Wall -std=c++11
+CFLAGS=-Wall -std=c++11 -ggdb
 
 INCLUDE_PATH=../gtest/include
 LIB_PATH=../gtest

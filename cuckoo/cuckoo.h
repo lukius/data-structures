@@ -29,7 +29,7 @@ private:
 
 	double load_factor() const;
 	size_t new_table_size() const;
-	void rehash();
+	void rehash(bool);
 	void do_insert(const T&);
 	void copy_from(const _CuckooHashTable&);
 	bool set_if_present(T *, const T&);
@@ -128,9 +128,12 @@ size_t _CuckooHashTable<T, H>::new_table_size() const
 }
 
 template<class T, class H>
-void _CuckooHashTable<T, H>::rehash()
+void _CuckooHashTable<T, H>::rehash(bool should_resize)
 {
-	size_t new_table_size = this->new_table_size();
+	size_t new_table_size = should_resize ?
+							this->new_table_size() :
+							this->_size;
+
 	_CuckooHashTable new_table(new_table_size);
 
 	typename std::vector<const T*>::iterator it;
@@ -155,7 +158,7 @@ template<class T, class H>
 void _CuckooHashTable<T, H>::insert(const T& key)
 {
 	if( this->load_factor() >= MAX_LOAD_FACTOR )
-		this->rehash();
+		this->rehash(true);
 
 	this->do_insert(key);
 }
@@ -163,19 +166,19 @@ void _CuckooHashTable<T, H>::insert(const T& key)
 template<class T, class H>
 void _CuckooHashTable<T, H>::do_insert(const T& key)
 {
+	T *value = new T(key);
+
+	// First check if the key is already stored. If so, update its value
+	// and stop.
+	if( this->set_if_present(value, *value) )
+		return;
+
+	T *evicted;
 	size_t h1, h2;
-
-	T *kicked_out, *value = new T(key);
-
 	bool inserted = false;
 
 	while( !inserted )
 	{
-		// First check if the key is already stored.
-		// If so, update its value and stop.
-		if( this->set_if_present(value, *value) )
-			return;
-
 		for(int i = 0; i < MAX_LOOP; ++i)
 		{
 			h1 = this->h_1.hash(*value);
@@ -187,29 +190,37 @@ void _CuckooHashTable<T, H>::do_insert(const T& key)
 				break;
 			}
 
-			// T_1[h1] is not free. Kick out that key and continue.
-			kicked_out = new T(*this->T_1[h1]);
+			// T_1[h1] is not free. Kick out that key in order to make foom
+			// and continue.
+			evicted = new T(*this->T_1[h1]);
 			delete this->T_1[h1];
 			this->T_1[h1] = value;
 
-			h2 = this->h_2.hash(*kicked_out);
-			// Now, if T_2[h2] is free, we place the kicked out key there.
+			// Now we need to put the evicted key back into the table.
+			h2 = this->h_2.hash(*evicted);
+			// Use T_2[h2] if it is free.
 			if( this->T_2[h2] == NULL )
 			{
-				this->T_2[h2] = kicked_out;
+				this->T_2[h2] = evicted;
 				inserted = true;
 				break;
 			}
 
-			// Otherwise, we have to loop after kicking out the item on
-			// T_2[h2].
+			// Otherwise, we have to kick out the key on T_2[h2] and
+			// start over again.
 			value = new T(*this->T_2[h2]);
 			delete this->T_2[h2];
-			this->T_2[h2] = kicked_out;
+			this->T_2[h2] = evicted;
 		}
 
+		// MAX_LOOP exceeded. Renew hash functions and rehash the table.
 		if( !inserted )
-			this->rehash();
+		{
+			this->h_1.update();
+			this->h_2.update();
+			// No need to resize as the load factor did not increase.
+			this->rehash(false);
+		}
 	}
 
 	this->_size++;
@@ -225,6 +236,9 @@ void _CuckooHashTable<T, H>::remove(const T& key)
 template<class T, class H>
 bool _CuckooHashTable<T, H>::set_if_present(T *value, const T& key)
 {
+	// Update values of already placed keys. Can be useful for
+	// types having satellite data (such as dictionary key-value pairs).
+
 	size_t h1 = this->h_1.hash(key);
 	if( this->T_1[h1] &&  *this->T_1[h1] == key )
 	{
@@ -247,8 +261,7 @@ bool _CuckooHashTable<T, H>::set_if_present(T *value, const T& key)
 template<class T, class H>
 bool _CuckooHashTable<T, H>::contains(const T& key) const
 {
-	const T *value = this->lookup(key);
-	return value != NULL;
+	return this->lookup(key) != NULL;
 }
 
 template<class T, class H>
@@ -280,6 +293,9 @@ size_t _CuckooHashTable<T, H>::size() const
 template<class T, class H>
 std::vector<const T*> _CuckooHashTable<T, H>::items() const
 {
+	// Returns an array holding the keys stored in the table
+	// without any particular order.
+
 	std::vector<const T*> items;
 
 	typename std::vector<const T*>::const_iterator it;
@@ -314,8 +330,7 @@ const _CuckooHashTable<T, H> &_CuckooHashTable<T, H>::operator=(const _CuckooHas
 	return *this;
 }
 
-// Define type alias for cuckoo hash tables that use the standard hashing
-// function. Tests, for example, will use other non-random hashers.
+// Type alias for cuckoo hash tables that use the standard hashing function.
 template<class T>
 using CuckooHashTable = _CuckooHashTable<T, Hasher>;
 

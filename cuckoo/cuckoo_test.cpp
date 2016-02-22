@@ -31,7 +31,7 @@ class CuckooHashTableTest : public testing::Test
 protected:
 	virtual void SetUp()
 	{
-		this->T = new _CuckooHashTable<int, NonRandomHasher>();
+		this->T = new CuckooHashTable<int>();
 	}
 
 	virtual void TearDown()
@@ -39,7 +39,7 @@ protected:
 		delete this->T;
 	}
 
-	_CuckooHashTable<int, NonRandomHasher> *T;
+	CuckooHashTable<int> *T;
 };
 
 
@@ -49,10 +49,10 @@ TEST(HasherTest, int_hash_test)
 	ulong x = 100;
 	ulong n = hasher.hash(x);
 
-	// 6 = [(3 * x) mod (2^32)] div 2^{5 - 4}
-	// 10 = [(5 * x) mod (2^32)] div 2^{5 - 4}
-	// 14 = [(7 * x) mod (2^32)] div 2^{5 - 4}
-	EXPECT_EQ(n, 6 ^ 10 ^ 14);
+	// 150 = [(3 * x) mod (2^64)] div 2^{5 - 4}
+	// 250 = [(5 * x) mod (2^64)] div 2^{5 - 4}
+	// 350 = [(7 * x) mod (2^64)] div 2^{5 - 4}
+	EXPECT_EQ(n, (150 ^ 250 ^ 350) % DEFAULT_W);
 }
 
 TEST(HasherTest, str_hash_test)
@@ -81,17 +81,6 @@ TEST_F(CuckooHashTableTest, basic_insertion_test)
 	EXPECT_FALSE(this->T->is_empty());
 	EXPECT_TRUE(this->T->contains(1000));
 	EXPECT_FALSE(this->T->contains(10));
-}
-
-TEST_F(CuckooHashTableTest, insertion_with_one_kickout_test)
-{
-	// hash(1000) = hash(892) = 0
-	this->T->insert(1000);
-	this->T->insert(892);
-
-	EXPECT_FALSE(this->T->is_empty());
-	EXPECT_TRUE(this->T->contains(1000));
-	EXPECT_TRUE(this->T->contains(892));
 }
 
 TEST_F(CuckooHashTableTest, rehashing_test)
@@ -159,7 +148,7 @@ TEST_F(CuckooHashTableTest, several_insertions_and_deletions_test)
 	for(int n = 0; n < 1000; n++)
 		EXPECT_TRUE(this->T->contains(n));
 
-	_CuckooHashTable<int, NonRandomHasher> S;
+	CuckooHashTable<int> S;
 	S = *this->T;
 
 	EXPECT_EQ(S.size(), 1000);
