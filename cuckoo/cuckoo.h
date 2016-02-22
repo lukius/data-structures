@@ -58,7 +58,7 @@ public:
 
 template<class T, class H>
 _CuckooHashTable<T, H>::_CuckooHashTable() :
-_CuckooHashTable(INITIAL_SIZE)
+	_CuckooHashTable(INITIAL_SIZE)
 {
 }
 
@@ -190,7 +190,7 @@ void _CuckooHashTable<T, H>::do_insert(const T& key)
 				break;
 			}
 
-			// T_1[h1] is not free. Kick out that key in order to make foom
+			// T_1[h1] is not free. Kick out that key in order to make room
 			// and continue.
 			evicted = new T(*this->T_1[h1]);
 			delete this->T_1[h1];
