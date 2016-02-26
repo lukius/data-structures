@@ -1,28 +1,6 @@
 // Cuckoo hashing implementation as presented in R. Pagh's and F.F. Rodler's
 // paper "Cuckoo Hashing".
 
-// TODO:
-//   * "If the hash tables have size r, we enforce that no more than r^2
-//      insertions are performed without changing the hash functions. More
-//      specifically, if r^2 insertions have been performed since the beginning
-//      of the last rehash, we force a new rehash."
-
-#ifndef _CUCKOO_H_
-#define _CUCKOO_H_
-
-#include <list>
-#include <vector>
-#include <tuple>
-#include <math.h>
-#include "hasher.h"
-
-#define EPSILON 7/5.
-
-#define MAX_LOOP	 		((int)ceil(3*LOG(this->T_1.size(), EPSILON)))
-#define MAX_LOAD_FACTOR		(1./(1 + EPSILON))
-
-#define INITIAL_SIZE 2
-
 // Each table stores tuples of the form <k, i>, where k is a key and i is such
 // that L[i] = k, being L the list of inserted keys. The type alias used for
 // these tuples is TableNode.
@@ -33,14 +11,49 @@
 // list can be used during a rehash to traverse the keys only (as opposed to
 // searching for them throughout the whole table, which takes Theta(r) time).
 
-template<class T>
-using ListNode = std::tuple<const T*,
-							size_t,
-							size_t>;
+// TODO:
+//   * "If the hash tables have size r, we enforce that no more than r^2
+//      insertions are performed without changing the hash functions. More
+//      specifically, if r^2 insertions have been performed since the beginning
+//      of the last rehash, we force a new rehash."
+
+
+#ifndef _CUCKOO_H_
+#define _CUCKOO_H_
+
+#include <list>
+#include <vector>
+#include <tuple>
+#include <algorithm>
+#include <math.h>
+#include "hasher.h"
+
+#define EPSILON 7/5.
+
+#define MAX_LOOP	 		((int)ceil(3*LOG(this->T_1->size(), EPSILON)))
+#define MAX_LOAD_FACTOR		(1./(1 + EPSILON))
+
+#define INITIAL_SIZE 2
+
+// Type aliases
 
 template<class T>
-using TableNode = std::tuple<const T*,
-							 typename std::list<ListNode<T>>::iterator>;
+using ListNode = std::tuple<const T*, size_t, size_t>;
+
+template<class T>
+using NodeList = std::list<ListNode<T>>;
+
+template<class T>
+using NodeListIter = typename std::list<ListNode<T>>::iterator;
+
+template<class T>
+using NodeListConstIter = typename std::list<ListNode<T>>::const_iterator;
+
+template<class T>
+using TableNode = std::tuple<const T*, NodeListIter<T>>;
+
+template<class T>
+using Table = std::vector<TableNode<T>*>;
 
 
 template<class T, class H>
@@ -48,44 +61,48 @@ class _CuckooHashTable
 {
 private:
 	// The tables and their respective hashing functions.
-	std::vector<TableNode<T>*> T_1, T_2;
+	Table<T> *T_1, *T_2;
 	H h_1, h_2;
 
 	// List of the keys stored in the table following their insertion order.
-	std::list<ListNode<T>> L;
+	NodeList<T> *L;
+
+	// Private methods
 
 	_CuckooHashTable(size_t);
+
+	void copy_from(const _CuckooHashTable&);
+	void erase();
+	bool set_if_present(const T *, const T&);
 
 	double load_factor() const;
 	size_t new_table_size() const;
 	void rehash(bool);
+
 	void do_insert(const T&);
-	void copy_from(const _CuckooHashTable&);
-	bool set_if_present(const T *, const T&);
+	const T *insert_in(const T *, size_t);
+	const T *evict(size_t, size_t);
+
 	const TableNode<T> *lookup_node(const T&) const;
 	TableNode<T> *new_node(const T*, size_t, size_t);
-	const T *evict(size_t, size_t);
-	const T *insert_in(const T *, size_t);
-	void erase();
 
 public:
 	_CuckooHashTable();
 	_CuckooHashTable(const _CuckooHashTable&);
 	~_CuckooHashTable();
 
+	const _CuckooHashTable &operator=(const _CuckooHashTable&);
+
 	void insert(const T&);
 	void remove(const T&);
-
-	bool is_empty() const;
-
-	size_t size() const;
 
 	bool contains(const T&) const;
 	const T *lookup(const T&) const;
 
-	std::vector<const T*> items() const;
+	size_t size() const;
+	bool is_empty() const;
 
-	const _CuckooHashTable &operator=(const _CuckooHashTable&);
+	std::vector<const T*> items() const;
 };
 
 
@@ -97,23 +114,22 @@ _CuckooHashTable<T, H>::_CuckooHashTable() :
 
 template<class T, class H>
 _CuckooHashTable<T, H>::_CuckooHashTable(size_t size) :
-	T_1(size),
-	T_2(size),
 	h_1(H(size)),
-	h_2(H(size)),
-	L()
+	h_2(H(size))
 {
-	for(size_t i = 0; i < this->T_1.size(); ++i)
+	this->T_1 = new Table<T>(size);
+	this->T_2 = new Table<T>(size);
+	this->L = new NodeList<T>();
+
+	for(size_t i = 0; i < this->T_1->size(); ++i)
 	{
-		this->T_1[i] = NULL;
-		this->T_2[i] = NULL;
+		(*this->T_1)[i] = NULL;
+		(*this->T_2)[i] = NULL;
 	}
 }
 
 template<class T, class H>
-_CuckooHashTable<T, H>::_CuckooHashTable(const _CuckooHashTable &h) :
-	T_1(h.T_1.size()),
-	T_2(h.T_2.size())
+_CuckooHashTable<T, H>::_CuckooHashTable(const _CuckooHashTable &h)
 {
 	this->copy_from(h);
 }
@@ -130,62 +146,64 @@ void _CuckooHashTable<T, H>::copy_from(const _CuckooHashTable &h)
 	size_t table, index;
 	const T *key;
 	TableNode<T> *new_node;
-	typename std::list<ListNode<T> >::const_iterator it_h_L;
-	typename std::list<ListNode<T> >::iterator it_L;
+	NodeListConstIter<T> it_h_L;
+	NodeListIter<T> it_L;
 
 	this->h_1 = h.h_1;
 	this->h_2 = h.h_2;
 
-	for(it_h_L = h.L.begin(); it_h_L != h.L.end(); ++it_h_L)
+	this->T_1 = new Table<T>(h.T_1->size());
+	this->T_2 = new Table<T>(h.T_1->size());
+	this->L = new NodeList<T>();
+
+	for(it_h_L = h.L->begin(); it_h_L != h.L->end(); ++it_h_L)
 	{
 		table = std::get<1>(*it_h_L);
 		index = std::get<2>(*it_h_L);
-		const std::vector<TableNode<T>*> &h_t = table == 1 ? h.T_1 : h.T_2;
-		std::vector<TableNode<T>*> &t = table == 1 ? this->T_1 : this->T_2;
+		const Table<T> &h_t = table == 1 ? *h.T_1 : *h.T_2;
+		Table<T> &t = table == 1 ? *this->T_1 : *this->T_2;
 
 		key = new T(*std::get<0>(*h_t[index]));
 
 		ListNode<T> list_node {key, table, index};
-		this->L.push_back(list_node);
+		this->L->push_back(list_node);
 
-		it_L = this->L.end();
-		it_L--;
+		it_L = this->L->end()--;
 		new_node = new TableNode<T> {key, it_L};
 
 		t[index] = new_node;
 	}
-
 }
 
 template<class T, class H>
 void _CuckooHashTable<T, H>::erase()
 {
-	for(size_t i = 0; i < this->T_1.size(); ++i)
+	for(size_t i = 0; i < this->T_1->size(); ++i)
 	{
-		if( this->T_1[i] != NULL )
-			delete std::get<0>(*this->T_1[i]);
-		if( this->T_2[i] != NULL )
-			delete std::get<0>(*this->T_2[i]);
+		if( (*this->T_1)[i] != NULL )
+			delete std::get<0>(*(*this->T_1)[i]);
+		if( (*this->T_2)[i] != NULL )
+			delete std::get<0>(*(*this->T_2)[i]);
 
-		delete this->T_1[i];
-		delete this->T_2[i];
+		delete (*this->T_1)[i];
+		delete (*this->T_2)[i];
 	}
 
-	this->L.clear();
-	this->T_1.clear();
-	this->T_2.clear();
+	delete this->L;
+	delete this->T_1;
+	delete this->T_2;
 }
 
 template<class T, class H>
 double _CuckooHashTable<T, H>::load_factor() const
 {
-	return double(this->size()) / (2*this->T_1.size());
+	return double(this->size()) / (2*this->T_1->size());
 }
 
 template<class T, class H>
 size_t _CuckooHashTable<T, H>::new_table_size() const
 {
-	return 2 * this->T_1.size();
+	return 2 * this->T_1->size();
 }
 
 template<class T, class H>
@@ -195,19 +213,25 @@ void _CuckooHashTable<T, H>::rehash(bool should_resize)
 				this->new_table_size() :
 				this->size();
 
+	// Temporary table to rehash the keys on.
 	_CuckooHashTable new_table(new_table_size);
 
-	typename std::list<ListNode<T>>::iterator it;
+	NodeListIter<T> it;
 
-	for( it = this->L.begin(); it != this->L.end(); it++ )
+	for( it = this->L->begin(); it != this->L->end(); it++ )
 	{
 		ListNode<T> list_node = *it;
 		const T *key = std::get<0>(list_node);
 		new_table.insert(*key);
 	}
 
-	// TODO: switch pointers
-	*this = new_table;
+	// Swap table pointers and copy hash functions in order to use the rehashed
+	// table from now on.
+	std::swap(this->T_1, new_table.T_1);
+	std::swap(this->T_2, new_table.T_2);
+	std::swap(this->L, new_table.L);
+	this->h_1 = new_table.h_1;
+	this->h_2 = new_table.h_2;
 }
 
 template<class T, class H>
@@ -263,7 +287,7 @@ const T *_CuckooHashTable<T, H>::insert_in(const T *value, size_t table)
 	const T *evicted = NULL;
 
 	H &hasher = table == 1 ? this->h_1 : this->h_2;
-	std::vector<TableNode<T>*> &t = table == 1 ? this->T_1 : this->T_2;
+	Table<T> &t = table == 1 ? *this->T_1 : *this->T_2;
 
 	size_t index = hasher.hash(*value);
 
@@ -278,15 +302,15 @@ const T *_CuckooHashTable<T, H>::insert_in(const T *value, size_t table)
 template<class T, class H>
 const T *_CuckooHashTable<T, H>::evict(size_t table, size_t index)
 {
-	std::vector<TableNode<T>*> &t = table == 1 ? this->T_1 : this->T_2;
-	typename std::list<ListNode<T>>::iterator it;
+	Table<T> &t = table == 1 ? *this->T_1 : *this->T_2;
+	NodeListIter<T> it;
 
 	const T *evicted = new T(*std::get<0>(*t[index]));
 	it = std::get<1>(*t[index]);
 
-	this->L.erase(it);
 	delete std::get<0>(*t[index]);
 	delete t[index];
+	this->L->erase(it);
 
 	return evicted;
 }
@@ -296,11 +320,10 @@ TableNode<T> *_CuckooHashTable<T, H>::new_node(const T *key, size_t table, size_
 {
 	ListNode<T> list_node {key, table, index};
 
-	this->L.push_back(list_node);
-	typename std::list<ListNode<T>>::iterator it(this->L.end());
-	it--;
+	this->L->push_back(list_node);
+	NodeListIter<T> it = this->L->end();
 
-	return new TableNode<T> {key, it};
+	return new TableNode<T> {key, --it};
 }
 
 template<class T, class H>
@@ -317,23 +340,22 @@ bool _CuckooHashTable<T, H>::set_if_present(const T *value, const T& key)
 	const TableNode<T> *node = this->lookup_node(key);
 	if( node != NULL )
 	{
-		typename std::list<ListNode<T>>::iterator it = std::get<1>(*node);
+		NodeListIter<T> it = std::get<1>(*node);
 
 		ListNode<T> list_node = *it;
 		size_t table = std::get<1>(list_node);
 		size_t index = std::get<2>(list_node);
-		std::vector<TableNode<T>*> &t = table == 1 ? this->T_1 : this->T_2;
+		Table<T> &t = table == 1 ? *this->T_1 : *this->T_2;
 
 		TableNode<T> *new_node = NULL;
-
 		if( value != NULL )
 			new_node = this->new_node(value, table, index);
 
 		delete std::get<0>(*t[index]);
 		delete t[index];
-		t[index]= new_node;
+		this->L->erase(it);
 
-		this->L.erase(it);
+		t[index]= new_node;
 	}
 
 	return node != NULL;
@@ -356,12 +378,12 @@ template<class T, class H>
 const TableNode<T> *_CuckooHashTable<T, H>::lookup_node(const T& key) const
 {
 	size_t h1 = this->h_1.hash(key);
-	if( this->T_1[h1] &&  *std::get<0>(*this->T_1[h1]) == key )
-		return this->T_1[h1];
+	if( (*this->T_1)[h1] &&  *std::get<0>(*(*this->T_1)[h1]) == key )
+		return (*this->T_1)[h1];
 
 	size_t h2 = this->h_2.hash(key);
-	if( this->T_2[h2] &&  *std::get<0>(*this->T_2[h2]) == key )
-		return this->T_2[h2];
+	if( (*this->T_2)[h2] &&  *std::get<0>(*(*this->T_2)[h2]) == key )
+		return (*this->T_2)[h2];
 
 	return NULL;
 }
@@ -375,7 +397,7 @@ bool _CuckooHashTable<T, H>::is_empty() const
 template<class T, class H>
 size_t _CuckooHashTable<T, H>::size() const
 {
-	return this->L.size();
+	return this->L->size();
 }
 
 template<class T, class H>
@@ -386,9 +408,9 @@ std::vector<const T*> _CuckooHashTable<T, H>::items() const
 
 	std::vector<const T*> items;
 
-	typename std::list<ListNode<T>>::const_iterator it;
+	NodeListConstIter<T> it;
 
-	for(it = this->L.begin(); it != this->L.end(); it++ )
+	for(it = this->L->begin(); it != this->L->end(); it++ )
 	{
 		const T *key = std::get<0>(*it);
 		items.push_back(key);
@@ -403,8 +425,6 @@ const _CuckooHashTable<T, H> &_CuckooHashTable<T, H>::operator=(const _CuckooHas
 	if( this != &h )
 	{
 		this->erase();
-		this->T_1.resize(h.T_1.size());
-		this->T_2.resize(h.T_2.size());
 		this->copy_from(h);
 	}
 
