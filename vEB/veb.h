@@ -19,16 +19,19 @@ class vEBTree
     int child_value(int) const;
 
     void _insert(int);
-    void _erase(int);
+    void _remove(int);
     bool _contains(int) const;
+
+    void erase();
+    void copy_from(const vEBTree&);
 
 public:
     vEBTree(int);
-    vEBTree(const vEBTree&) { /* TODO */ };
-    ~vEBTree() { /* TODO */ };
+    vEBTree(const vEBTree&);
+    ~vEBTree();
 
     void insert(int);
-    void erase(int);
+    void remove(int);
 
     int get_min() const;
     int get_max() const;
@@ -37,7 +40,7 @@ public:
     int successor(int) const;
     int predecessor(int) const;
 
-    vEBTree &operator=(const vEBTree&) { /*TODO*/ };
+    const vEBTree &operator=(const vEBTree&);
 };
 
 #endif

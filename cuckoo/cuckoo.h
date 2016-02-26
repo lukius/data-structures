@@ -378,11 +378,11 @@ template<class T, class H>
 const TableNode<T> *_CuckooHashTable<T, H>::lookup_node(const T& key) const
 {
 	size_t h1 = this->h_1.hash(key);
-	if( (*this->T_1)[h1] &&  *std::get<0>(*(*this->T_1)[h1]) == key )
+	if( (*this->T_1)[h1] && *std::get<0>(*(*this->T_1)[h1]) == key )
 		return (*this->T_1)[h1];
 
 	size_t h2 = this->h_2.hash(key);
-	if( (*this->T_2)[h2] &&  *std::get<0>(*(*this->T_2)[h2]) == key )
+	if( (*this->T_2)[h2] && *std::get<0>(*(*this->T_2)[h2]) == key )
 		return (*this->T_2)[h2];
 
 	return NULL;

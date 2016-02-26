@@ -19,6 +19,39 @@ vEBTree::vEBTree(int n)
     this->max = NULL;
 }
 
+vEBTree::vEBTree(const vEBTree &t)
+{
+	this->copy_from(t);
+}
+
+vEBTree::~vEBTree()
+{
+    this->erase();
+}
+
+void vEBTree::erase()
+{
+    for(size_t i = 0; i < this->children.size(); ++i)
+        delete this->children[i];
+
+	delete this->summary;
+	delete this->min;
+	delete this->max;
+}
+
+void vEBTree::copy_from(const vEBTree &t)
+{
+	this->block_size = t.block_size;
+
+	this->children.resize(t.children.size());
+    for(size_t i = 0; i < this->children.size(); ++i)
+        this->children[i] = new vEBTree(*t.children[i]);
+
+	this->summary = t.summary == NULL ? NULL : new vEBTree(*t.summary);
+	this->min = t.min == NULL ? NULL : new int(*t.min);
+	this->max = t.max == NULL ? NULL : new int(*t.max);
+}
+
 void vEBTree::initialize_children(size_t num_children) 
 {
     this->children.resize(num_children);
@@ -54,15 +87,15 @@ void vEBTree::_insert(int value)
     this->children[index]->insert(child_value);
 }
 
-void vEBTree::_erase(int value)
+void vEBTree::_remove(int value)
 {
     // Recursively remove the given value from the appropriate child.
 
     size_t index = this->child_index(value);
     int child_value = this->child_value(value);
-    this->children[index]->erase(child_value);
+    this->children[index]->remove(child_value);
     if(this->children[index]->is_empty())
-        this->summary->erase(index);
+        this->summary->remove(index);
 }
 
 bool vEBTree::_contains(int value) const
@@ -109,7 +142,7 @@ void vEBTree::insert(int value)
     this->_insert(value);
 }
 
-void vEBTree::erase(int value)
+void vEBTree::remove(int value)
 {
     // Precondition: tree must not be empty.
     // Also, value should be stored in the tree.
@@ -143,7 +176,7 @@ void vEBTree::erase(int value)
                       *this->children[*this->summary->min]->min;
             // It is important to erase this value from the tree, 
             // since it will be now stored separately.
-            this->_erase(new_min);
+            this->_remove(new_min);
         }
     
         // Finally, update minimum and return.
@@ -163,7 +196,7 @@ void vEBTree::erase(int value)
         {
             new_max = (*this->summary->max * this->block_size) +
                       *this->children[*this->summary->max]->max;
-            this->_erase(new_max);
+            this->_remove(new_max);
         }
     
         *this->max = new_max;
@@ -171,7 +204,7 @@ void vEBTree::erase(int value)
     }
 
     // Erase any other value recursively.
-    this->_erase(value);
+    this->_remove(value);
 }
 
 bool vEBTree::contains(int value) const
@@ -283,4 +316,15 @@ int vEBTree::get_max() const
     assert(!this->is_empty());
 
     return *this->max;
+}
+
+const vEBTree &vEBTree::operator=(const vEBTree& t)
+{
+	if(this != &t)
+	{
+		this->erase();
+		this->copy_from(t);
+	}
+
+	return *this;
 }
