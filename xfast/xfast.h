@@ -6,27 +6,12 @@
 #include <list>
 #include <vector>
 #include <stddef.h>
+#include "xfast_table.h"
+
 
 class XFastTrie
 {
 private:
-
-	struct TrieNode
-	{
-		TrieNode *left, *right;
-
-		// Links to predecessor and successor leaves, which are meaningful
-		// only if left or right are null, respectively
-		TrieNode *pred, *succ;
-
-		// Only meaningful for leaf nodes
-		TrieNode *prev, *next;
-
-		TrieNode() :
-			left(NULL), right(NULL),
-			pred(NULL), succ(NULL),
-			prev(NULL), next(NULL) {}
-	};
 
 	// Universe size
 	int U;
@@ -34,7 +19,7 @@ private:
 	size_t n;
 
 	// Hash tables (one per layer)
-	std::vector<CuckooHashTable<int>> hash_tables;
+	std::vector<XFastTable> hash_tables;
 
 	// Root node of the trie
 	TrieNode *root;
@@ -44,7 +29,7 @@ private:
 
 	std::list<int> *binary_digits(int) const;
 	std::vector<int> *prefixes(const std::list<int>&) const;
-	size_t search_longest_prefix_index(const std::vector<int> &) const;
+	TrieNode *search_longest_prefix_index(const std::vector<int> &) const;
 
 	// Friend test cases (ugly)
 	FRIEND_TEST(XFastTrieTest, prefix_test);

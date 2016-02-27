@@ -52,7 +52,7 @@ bool XFastTrie::contains(int value) const
 {
 	// Lookup takes constant time: just check the cuckoo hash table in the
 	// bottom level.
-	return this->hash_tables[this->n].contains(value);
+	return this->hash_tables[this->n].lookup(value) != NULL;
 }
 
 int XFastTrie::get_min() const
@@ -127,25 +127,25 @@ vector<int> *XFastTrie::prefixes(const list<int> &digits) const
 	return prefixes;
 }
 
-size_t XFastTrie::search_longest_prefix_index(const vector<int> &prefixes) const
+#include <iostream>
+TrieNode *XFastTrie::search_longest_prefix_index(const vector<int> &prefixes) const
 {
 	// Search for the highest-indexed hash table containing a prefix.
 
-	if(!this->hash_tables[1].contains(prefixes[1]))
-		return 0;
+ 	if(this->hash_tables[1].lookup(prefixes[0]) == NULL)
+		return NULL;
 
 	size_t i = 1, j = this->n, m;
 
 	while(i != j)
 	{
 		m = (i + j) >> 1;
-		if(this->hash_tables[m].contains(prefixes[m]))
+		if(this->hash_tables[m].lookup(prefixes[m-1]) != NULL)
 			i = m + 1;
 		else
 			j = m - 1;
 	}
-
-	return i;
+	return this->hash_tables[i].lookup(prefixes[i-1]);
 }
 
 const XFastTrie &XFastTrie::operator=(const XFastTrie& t)
