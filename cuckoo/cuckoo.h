@@ -129,7 +129,9 @@ _CuckooHashTable<T, H>::_CuckooHashTable(size_t size) :
 }
 
 template<class T, class H>
-_CuckooHashTable<T, H>::_CuckooHashTable(const _CuckooHashTable &h)
+_CuckooHashTable<T, H>::_CuckooHashTable(const _CuckooHashTable &h) :
+	h_1(h.h_1),
+	h_2(h.h_2)
 {
 	this->copy_from(h);
 }

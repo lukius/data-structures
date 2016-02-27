@@ -44,8 +44,8 @@ void vEBTree::copy_from(const vEBTree &t)
 	this->block_size = t.block_size;
 
 	this->children.resize(t.children.size());
-    for(size_t i = 0; i < this->children.size(); ++i)
-        this->children[i] = new vEBTree(*t.children[i]);
+	for(size_t i = 0; i < this->children.size(); ++i)
+		this->children[i] = new vEBTree(*t.children[i]);
 
 	this->summary = t.summary == NULL ? NULL : new vEBTree(*t.summary);
 	this->min = t.min == NULL ? NULL : new int(*t.min);
