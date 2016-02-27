@@ -127,7 +127,6 @@ vector<int> *XFastTrie::prefixes(const list<int> &digits) const
 	return prefixes;
 }
 
-#include <iostream>
 TrieNode *XFastTrie::search_longest_prefix_index(const vector<int> &prefixes) const
 {
 	// Search for the highest-indexed hash table containing a prefix.
@@ -145,6 +144,7 @@ TrieNode *XFastTrie::search_longest_prefix_index(const vector<int> &prefixes) co
 		else
 			j = m - 1;
 	}
+
 	return this->hash_tables[i].lookup(prefixes[i-1]);
 }
 

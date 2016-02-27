@@ -40,20 +40,20 @@ TEST(XFastTrieTest, prefix_search_test)
 {
 	XFastTrie T(7);
 
-	TrieNode *node41 = new TrieNode();
-	TrieNode *node42 = new TrieNode();
-	TrieNode *node62 = new TrieNode();
-	TrieNode *node53 = new TrieNode();
-	TrieNode *node63 = new TrieNode();
-	TrieNode *node73 = new TrieNode();
+	TrieNode node41;
+	TrieNode node42;
+	TrieNode node62;
+	TrieNode node53;
+	TrieNode node63;
+	TrieNode node73;
 	TrieNode *null = NULL;
 
-	XFastTableNode tnode41 {4, node41};
-	XFastTableNode tnode42 {4, node42};
-	XFastTableNode tnode62 {6, node62};
-	XFastTableNode tnode53 {5, node53};
-	XFastTableNode tnode63 {6, node63};
-	XFastTableNode tnode73 {7, node73};
+	XFastTableNode tnode41 {4, &node41};
+	XFastTableNode tnode42 {4, &node42};
+	XFastTableNode tnode62 {6, &node62};
+	XFastTableNode tnode53 {5, &node53};
+	XFastTableNode tnode63 {6, &node63};
+	XFastTableNode tnode73 {7, &node73};
 
 	T.hash_tables[1].insert(tnode41);
 	T.hash_tables[2].insert(tnode42);
@@ -66,7 +66,7 @@ TEST(XFastTrieTest, prefix_search_test)
 	vector<int> *prefixes = T.prefixes(*digits);
 	TrieNode *node_found = T.search_longest_prefix_index(*prefixes);
 
-	EXPECT_EQ(node_found, node53);
+	EXPECT_EQ(node_found, &node53);
 
 	delete digits;
 	delete prefixes;
