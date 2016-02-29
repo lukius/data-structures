@@ -2,6 +2,7 @@
 #include "cuckoo.h"
 #include <list>
 #include <cmath>
+#include <assert.h>
 #include <stddef.h>
 
 using namespace std;
@@ -78,17 +79,48 @@ int XFastTrie::get_max() const
 
 bool XFastTrie::is_empty() const
 {
-	// TODO
+	return
+		this->root->left == NULL &&
+		this->root->right == NULL;
 }
 
 int XFastTrie::successor(int value) const
 {
-	// TODO
+	assert(!this->is_empty() && value < this->U);
+
+	TrieNode *node = this->search_longest_prefix_index(value);
+
+	if(node->is_leaf)
+	{
+		assert(node->next != NULL);
+		return node->next->value;
+	}
+
+	if(node->succ != NULL)
+		return node->succ->value;
+
+	// Must have predecessor pointer
+	return node->pred->next->value;
 }
 
 int XFastTrie::predecessor(int value) const
 {
-	// TODO
+	// Finding the predecessor follows the same logic as finding the successor.
+
+	assert(!this->is_empty() && value > 0);
+
+	TrieNode *node = this->search_longest_prefix_index(value);
+
+	if(node->is_leaf)
+	{
+		assert(node->prev != NULL);
+		return node->prev->value;
+	}
+
+	if(node->pred != NULL)
+		return node->pred->value;
+
+	return node->succ->prev->value;
 }
 
 list<int> *XFastTrie::binary_digits(int value) const
@@ -130,18 +162,22 @@ TrieNode *XFastTrie::search_longest_prefix_index(int value) const
  	if(this->lookup_prefix(value, 1) == NULL)
 		return NULL;
 
-	size_t i = 1, j = this->n, m;
+ 	// k is the index of the last level where a prefix was found.
+	size_t i = 1, j = this->n, m, k = 1;
 
-	while(i != j)
+	while(i <= j)
 	{
 		m = (i + j) >> 1;
 		if(this->lookup_prefix(value, m) != NULL)
+		{
 			i = m + 1;
+			k = m;
+		}
 		else
 			j = m - 1;
 	}
 
-	return this->lookup_prefix(value, i);
+	return this->lookup_prefix(value, k);
 }
 
 const XFastTrie &XFastTrie::operator=(const XFastTrie& t)

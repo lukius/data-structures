@@ -14,11 +14,15 @@ struct TrieNode
 
 	// Only meaningful for leaf nodes
 	TrieNode *prev, *next;
+	int value;
+
+	bool is_leaf;
 
 	TrieNode() :
 		left(NULL), right(NULL),
 		pred(NULL), succ(NULL),
-		prev(NULL), next(NULL) {}
+		prev(NULL), next(NULL), value(-1),
+		is_leaf(false) {}
 };
 
 struct XFastTableNode

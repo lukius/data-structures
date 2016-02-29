@@ -34,8 +34,12 @@ private:
 	void insert_prefix(int, TrieNode*, size_t);
 
 	// Friend test cases (ugly)
+	friend class XFastTrieTest;
 	FRIEND_TEST(XFastTrieTest, digits_test);
 	FRIEND_TEST(XFastTrieTest, prefix_search_test);
+	FRIEND_TEST(XFastTrieTest, leaf_successor_test);
+	FRIEND_TEST(XFastTrieTest, right_thread_successor_test);
+	FRIEND_TEST(XFastTrieTest, left_thread_successor_test);
 
 public:
 	XFastTrie(size_t);
