@@ -6,7 +6,8 @@
 
 using namespace std;
 
-#define N_BITS(n) (size_t)ceil((std::log(n+1)/std::log(2)))
+#define N_BITS(n)		(size_t)ceil((std::log(n+1)/std::log(2)))
+#define PREFIX(x, i)	((x >> (this->n-i)) << (this->n-i))
 
 
 XFastTrie::XFastTrie(size_t U) : U(U)
@@ -111,8 +112,15 @@ list<int> *XFastTrie::binary_digits(int value) const
 
 TrieNode *XFastTrie::lookup_prefix(int value, size_t i) const
 {
-	int prefix = (value >> (this->n - i)) << (this->n - i);
+	int prefix = PREFIX(value, i);
 	return this->hash_tables[i].lookup(prefix);
+}
+
+void XFastTrie::insert_prefix(int value, TrieNode *node, size_t i)
+{
+	int prefix = PREFIX(value, i);
+	XFastTableNode table_node {prefix, node};
+	this->hash_tables[i].insert(table_node);
 }
 
 TrieNode *XFastTrie::search_longest_prefix_index(int value) const

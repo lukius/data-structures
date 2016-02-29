@@ -47,25 +47,16 @@ TEST(XFastTrieTest, prefix_search_test)
 	TrieNode node73;
 	TrieNode *null = NULL;
 
-	XFastTableNode tnode41 {4, &node41};
-	XFastTableNode tnode42 {4, &node42};
-	XFastTableNode tnode62 {6, &node62};
-	XFastTableNode tnode53 {5, &node53};
-	XFastTableNode tnode63 {6, &node63};
-	XFastTableNode tnode73 {7, &node73};
-
-	T.hash_tables[1].insert(tnode41);
-	T.hash_tables[2].insert(tnode42);
-	T.hash_tables[2].insert(tnode62);
-	T.hash_tables[3].insert(tnode53);
-	T.hash_tables[3].insert(tnode63);
-	T.hash_tables[3].insert(tnode73);
+	T.insert_prefix(5, &node41, 1);
+	T.insert_prefix(5, &node42, 2);
+	T.insert_prefix(5, &node53, 3);
+	T.insert_prefix(7, &node62, 2);
+	T.insert_prefix(7, &node73, 3);
+	T.insert_prefix(6, &node63, 3);
 
 	TrieNode *node_found = T.search_longest_prefix_index(5);
-
 	EXPECT_EQ(node_found, &node53);
 
 	node_found = T.search_longest_prefix_index(1);
-
 	EXPECT_EQ(node_found, null);
 }

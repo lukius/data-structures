@@ -31,6 +31,8 @@ private:
 	TrieNode *lookup_prefix(int, size_t) const;
 	TrieNode *search_longest_prefix_index(int) const;
 
+	void insert_prefix(int, TrieNode*, size_t);
+
 	// Friend test cases (ugly)
 	FRIEND_TEST(XFastTrieTest, digits_test);
 	FRIEND_TEST(XFastTrieTest, prefix_search_test);
