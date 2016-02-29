@@ -21,19 +21,18 @@ protected:
 	XFastTrie *T;
 };
 
-TEST(XFastTrieTest, prefix_test)
+TEST(XFastTrieTest, digits_test)
 {
-	XFastTrie T(7);
+	XFastTrie T(9);
 
 	list<int> *digits = T.binary_digits(5);
-	vector<int> *prefixes = T.prefixes(*digits);
-	vector<int> expected({4, 4, 5});
+	vector<int> expected({0, 1, 0, 1});
+	list<int>::iterator it = digits->begin();
 
-	for(size_t i = 0; i < prefixes->size(); ++i)
-		EXPECT_EQ((*prefixes)[i], expected[i]);
+	for(int i = 0; it != digits->end(); ++it, ++i)
+		EXPECT_EQ(*it, expected[i]);
 
 	delete digits;
-	delete prefixes;
 }
 
 TEST(XFastTrieTest, prefix_search_test)
@@ -62,21 +61,11 @@ TEST(XFastTrieTest, prefix_search_test)
 	T.hash_tables[3].insert(tnode63);
 	T.hash_tables[3].insert(tnode73);
 
-	list<int> *digits = T.binary_digits(5);
-	vector<int> *prefixes = T.prefixes(*digits);
-	TrieNode *node_found = T.search_longest_prefix_index(*prefixes);
+	TrieNode *node_found = T.search_longest_prefix_index(5);
 
 	EXPECT_EQ(node_found, &node53);
 
-	delete digits;
-	delete prefixes;
-
-	digits = T.binary_digits(1);
-	prefixes = T.prefixes(*digits);
-	node_found = T.search_longest_prefix_index(*prefixes);
+	node_found = T.search_longest_prefix_index(1);
 
 	EXPECT_EQ(node_found, null);
-
-	delete digits;
-	delete prefixes;
 }

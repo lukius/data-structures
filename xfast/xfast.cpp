@@ -109,29 +109,17 @@ list<int> *XFastTrie::binary_digits(int value) const
 	return digits;
 }
 
-vector<int> *XFastTrie::prefixes(const list<int> &digits) const
+TrieNode *XFastTrie::lookup_prefix(int value, size_t i) const
 {
-	vector<int> *prefixes = new vector<int>(digits.size());
-	int prefix = 0, i = 0, digit;
-	int k = 1 << (this->n - 1);
-
-	for(list<int>::const_iterator it = digits.begin(); it != digits.end(); ++it)
-	{
-		digit = *it;
-		prefix += k * digit;
-		(*prefixes)[i] = prefix;
- 		k >>= 1;
- 		i++;
-	}
-
-	return prefixes;
+	int prefix = (value >> (this->n - i)) << (this->n - i);
+	return this->hash_tables[i].lookup(prefix);
 }
 
-TrieNode *XFastTrie::search_longest_prefix_index(const vector<int> &prefixes) const
+TrieNode *XFastTrie::search_longest_prefix_index(int value) const
 {
 	// Search for the highest-indexed hash table containing a prefix.
 
- 	if(this->hash_tables[1].lookup(prefixes[0]) == NULL)
+ 	if(this->lookup_prefix(value, 1) == NULL)
 		return NULL;
 
 	size_t i = 1, j = this->n, m;
@@ -139,13 +127,13 @@ TrieNode *XFastTrie::search_longest_prefix_index(const vector<int> &prefixes) co
 	while(i != j)
 	{
 		m = (i + j) >> 1;
-		if(this->hash_tables[m].lookup(prefixes[m-1]) != NULL)
+		if(this->lookup_prefix(value, m) != NULL)
 			i = m + 1;
 		else
 			j = m - 1;
 	}
 
-	return this->hash_tables[i].lookup(prefixes[i-1]);
+	return this->lookup_prefix(value, i);
 }
 
 const XFastTrie &XFastTrie::operator=(const XFastTrie& t)

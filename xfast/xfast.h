@@ -28,11 +28,11 @@ private:
 	void copy_from(const XFastTrie&);
 
 	std::list<int> *binary_digits(int) const;
-	std::vector<int> *prefixes(const std::list<int>&) const;
-	TrieNode *search_longest_prefix_index(const std::vector<int> &) const;
+	TrieNode *lookup_prefix(int, size_t) const;
+	TrieNode *search_longest_prefix_index(int) const;
 
 	// Friend test cases (ugly)
-	FRIEND_TEST(XFastTrieTest, prefix_test);
+	FRIEND_TEST(XFastTrieTest, digits_test);
 	FRIEND_TEST(XFastTrieTest, prefix_search_test);
 
 public:
