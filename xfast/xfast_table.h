@@ -1,12 +1,14 @@
 #ifndef _XFAST_HASHER_H_
 #define _XFAST_HASHER_H_
 
+#include <vector>
 #include "hasher.h"
 #include "cuckoo.h"
 
 struct TrieNode
 {
-	TrieNode *left, *right;
+	// Left and right nodes indexed 0 and 1, respectively
+	std::vector<TrieNode*> children;
 
 	// Links to predecessor and successor leaves, which are meaningful
 	// only if left or right are null, respectively
@@ -18,11 +20,7 @@ struct TrieNode
 
 	bool is_leaf;
 
-	TrieNode() :
-		left(NULL), right(NULL),
-		pred(NULL), succ(NULL),
-		prev(NULL), next(NULL), value(-1),
-		is_leaf(false) {}
+	TrieNode();
 };
 
 struct XFastTableNode

@@ -26,22 +26,22 @@ protected:
 
 		T.root = root;
 
-		root->right = node41;
-		root->left = node01;
+		root->children[1] = node41;
+		root->children[0] = node01;
 
-		node01->left = node02;
+		node01->children[0] = node02;
 		node01->succ = node53;
 
 		node02->succ = node13;
 
-		node41->right = node62;
-		node41->left = node42;
+		node41->children[1] = node62;
+		node41->children[0] = node42;
 
-		node42->right = node53;
+		node42->children[1] = node53;
 		node42->pred = node13;
 
-		node62->right = node73;
-		node62->left = node63;
+		node62->children[1] = node73;
+		node62->children[0] = node63;
 
 		node13->is_leaf = true;
 		node13->value = 1;
@@ -100,9 +100,9 @@ TEST_F(XFastTrieTest, digits_test)
 {
 	XFastTrie T(9);
 
-	list<int> *digits = T.binary_digits(5);
+	vector<int> *digits = T.binary_digits(5);
 	vector<int> expected({0, 1, 0, 1});
-	list<int>::iterator it = digits->begin();
+	vector<int>::iterator it = digits->begin();
 
 	for(int i = 0; it != digits->end(); ++it, ++i)
 		EXPECT_EQ(*it, expected[i]);
@@ -134,4 +134,62 @@ TEST_F(XFastTrieTest, right_thread_successor_test)
 TEST_F(XFastTrieTest, left_thread_successor_test)
 {
 	EXPECT_EQ(this->T->successor(4), 5);
+}
+
+TEST_F(XFastTrieTest, insertion_test)
+{
+	XFastTrie T(15);
+
+	EXPECT_TRUE(T.is_empty());
+
+	T.insert(7);
+
+	EXPECT_FALSE(T.is_empty());
+	EXPECT_TRUE(T.contains(7));
+	EXPECT_FALSE(T.contains(6));
+	EXPECT_FALSE(T.contains(8));
+	EXPECT_EQ(T.get_min(), 7);
+	EXPECT_EQ(T.get_max(), 7);
+	EXPECT_EQ(T.successor(2), 7);
+	EXPECT_EQ(T.predecessor(10), 7);
+
+	T.insert(6);
+
+	EXPECT_TRUE(T.contains(7));
+	EXPECT_TRUE(T.contains(6));
+	EXPECT_FALSE(T.contains(8));
+	EXPECT_EQ(T.get_min(), 6);
+	EXPECT_EQ(T.get_max(), 7);
+	EXPECT_EQ(T.successor(6), 7);
+	EXPECT_EQ(T.predecessor(7), 6);
+
+	T.insert(9);
+
+	EXPECT_TRUE(T.contains(7));
+	EXPECT_TRUE(T.contains(6));
+	EXPECT_TRUE(T.contains(9));
+	EXPECT_FALSE(T.contains(8));
+	EXPECT_EQ(T.get_min(), 6);
+	EXPECT_EQ(T.get_max(), 9);
+	EXPECT_EQ(T.successor(6), 7);
+	EXPECT_EQ(T.successor(7), 9);
+	EXPECT_EQ(T.successor(8), 9);
+	EXPECT_EQ(T.predecessor(9), 7);
+	EXPECT_EQ(T.predecessor(8), 7);
+	EXPECT_EQ(T.predecessor(7), 6);
+
+	T.insert(8);
+
+	EXPECT_TRUE(T.contains(7));
+	EXPECT_TRUE(T.contains(6));
+	EXPECT_TRUE(T.contains(9));
+	EXPECT_TRUE(T.contains(8));
+	EXPECT_EQ(T.get_min(), 6);
+	EXPECT_EQ(T.get_max(), 9);
+	EXPECT_EQ(T.successor(6), 7);
+	EXPECT_EQ(T.successor(7), 8);
+	EXPECT_EQ(T.successor(8), 9);
+	EXPECT_EQ(T.predecessor(9), 8);
+	EXPECT_EQ(T.predecessor(8), 7);
+	EXPECT_EQ(T.predecessor(7), 6);
 }

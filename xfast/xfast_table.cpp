@@ -1,6 +1,16 @@
 #include <tuple>
 #include "xfast_table.h"
 
+TrieNode::TrieNode() :
+	children(2),
+	pred(NULL), succ(NULL),
+	prev(NULL), next(NULL), value(-1),
+	is_leaf(false)
+{
+	this->children[0] = NULL;
+	this->children[1] = NULL;
+}
+
 XFastTableNode::XFastTableNode(int first, TrieNode *second) :
 	first(first),
 	second(second)

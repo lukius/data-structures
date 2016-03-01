@@ -3,7 +3,6 @@
 
 #include "cuckoo.h"
 #include "gtest/gtest_prod.h"
-#include <list>
 #include <vector>
 #include <stddef.h>
 #include "xfast_table.h"
@@ -27,9 +26,13 @@ private:
 	void erase();
 	void copy_from(const XFastTrie&);
 
-	std::list<int> *binary_digits(int) const;
+	std::vector<int> *binary_digits(int) const;
+
 	TrieNode *lookup_prefix(int, size_t) const;
 	TrieNode *search_longest_prefix_index(int) const;
+	TrieNode *successor_node(int) const;
+	TrieNode *predecessor_node(int) const;
+	TrieNode *new_leaf_node(int, TrieNode*, TrieNode*);
 
 	void insert_prefix(int, TrieNode*, size_t);
 

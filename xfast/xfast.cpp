@@ -40,9 +40,80 @@ void XFastTrie::copy_from(const XFastTrie &t)
 	// TODO
 }
 
+// Expected O(log U) time complexity since insertion in cuckoo hash tables
+// takes expected O(1) time.
 void XFastTrie::insert(int value)
 {
-	// TODO
+	if(this->contains(value))
+		return;
+
+	vector<int> &digits = *this->binary_digits(value);
+
+	TrieNode *successor_node = this->successor_node(value);
+	TrieNode *predecessor_node = this->predecessor_node(value);
+	TrieNode *leaf_node = this->new_leaf_node(value, successor_node, predecessor_node);
+
+	TrieNode *current = this->root;
+
+	// Iterate through the digits and update the trie.
+	for(size_t i = 0; i < this->n - 1; ++i)
+	{
+		int digit = digits[i];
+
+		if(current->children[digit] != NULL)
+		{
+			// Node already exists. Just update successor and predecessor
+			// pointers: as this node's successor is greater than the newly
+			// inserted value, by definition this value now becomes its
+			// successor.
+			if(current->succ != NULL && current->succ == successor_node)
+				current->succ = leaf_node;
+			if(current->pred != NULL && current->pred == predecessor_node)
+				current->pred = leaf_node;
+
+			current = current->children[digit];
+		}
+		else
+		{
+			// Node does not exist. We must create it.
+			TrieNode *new_node = new TrieNode();
+
+			// Set successor/predecessor according to the next digit to come.
+			// A 1 means that the left pointer will remain null, and so the
+			// successor must point to the lowest value in the rightmost tree,
+			// which is the new value being inserted.
+			if(digits[i+1] == 1)
+				new_node->succ = leaf_node;
+			if(digits[i+1] == 0)
+				new_node->pred = leaf_node;
+
+			// Connect parent and adjust its successor/predecessor pointers.
+			current->children[digit] = new_node;
+			if(digit == 0)
+			{
+				current->succ = NULL;
+				if(current->pred == NULL && current->children[1] == NULL)
+					current->pred = leaf_node;
+			}
+			if(digit == 1)
+			{
+				current->pred = NULL;
+				if(current->succ == NULL && current->children[0] == NULL)
+					current->succ = leaf_node;
+			}
+
+			current = new_node;
+		}
+
+		// Finally, update the hash table controlling the prefixes in level i+1.
+		this->insert_prefix(value, current, i+1);
+	}
+
+	// current points to the last node visited in the loop. Thus, we have to
+	// connect it to the leaf node.
+	current->children[digits[this->n - 1]] = leaf_node;
+
+	delete &digits;
 }
 
 void XFastTrie::remove(int value)
@@ -80,64 +151,99 @@ int XFastTrie::get_max() const
 bool XFastTrie::is_empty() const
 {
 	return
-		this->root->left == NULL &&
-		this->root->right == NULL;
+		this->root->children[0] == NULL &&
+		this->root->children[1] == NULL;
 }
 
 int XFastTrie::successor(int value) const
 {
-	assert(!this->is_empty() && value < this->U);
+	TrieNode *node = this->successor_node(value);
 
-	TrieNode *node = this->search_longest_prefix_index(value);
+	assert(node != NULL);
 
-	if(node->is_leaf)
-	{
-		assert(node->next != NULL);
-		return node->next->value;
-	}
-
-	if(node->succ != NULL)
-		return node->succ->value;
-
-	// Must have predecessor pointer
-	return node->pred->next->value;
+	return node->value;
 }
 
 int XFastTrie::predecessor(int value) const
 {
-	// Finding the predecessor follows the same logic as finding the successor.
+	TrieNode *node = this->predecessor_node(value);
 
-	assert(!this->is_empty() && value > 0);
+	assert(node != NULL);
+
+	return node->value;
+}
+
+TrieNode *XFastTrie::new_leaf_node(int value, TrieNode *successor,
+		TrieNode *predecessor)
+{
+	TrieNode *new_node = new TrieNode();
+
+	this->insert_prefix(value, new_node, this->n);
+
+	new_node->value = value;
+	new_node->is_leaf = true;
+	new_node->next = successor;
+	new_node->prev = predecessor;
+
+	if(successor != NULL)
+		successor->prev = new_node;
+	if(predecessor != NULL)
+		predecessor->next = new_node;
+
+	return new_node;
+}
+
+TrieNode *XFastTrie::successor_node(int value) const
+{
+	TrieNode *node = this->search_longest_prefix_index(value);
+
+	if(node->is_leaf)
+		return node->next;
+
+	if(node->succ != NULL)
+		return node->succ;
+
+	if(node->pred != NULL)
+		return node->pred->next;
+
+	return NULL;
+}
+
+TrieNode *XFastTrie::predecessor_node(int value) const
+{
+	// Finding the predecessor follows the same logic as finding the successor.
 
 	TrieNode *node = this->search_longest_prefix_index(value);
 
 	if(node->is_leaf)
-	{
-		assert(node->prev != NULL);
-		return node->prev->value;
-	}
+		return node->prev;
 
 	if(node->pred != NULL)
-		return node->pred->value;
+		return node->pred;
 
-	return node->succ->prev->value;
+	if(node->succ != NULL)
+		return node->succ->prev;
+
+	return NULL;
 }
 
-list<int> *XFastTrie::binary_digits(int value) const
+vector<int> *XFastTrie::binary_digits(int value) const
 {
-	list<int> *digits = new list<int>();
+	vector<int> *digits = new vector<int>(this->n);
 	div_t dv {};
+	ssize_t i = this->n - 1;
 
 	while(value > 0)
 	{
 		dv = div(value, 2);
-		digits->push_front(dv.rem);
+		(*digits)[i] = dv.rem;
 		value = dv.quot;
+		i--;
 	}
 
 	// Left-pad with zeroes.
-	while(digits->size() < this->n)
-		digits->push_front(0);
+	for(; i > 0; i--)
+		(*digits)[i] = 0;
 
 	return digits;
 }
@@ -160,7 +266,7 @@ TrieNode *XFastTrie::search_longest_prefix_index(int value) const
 	// Search for the highest-indexed hash table containing a prefix.
 
  	if(this->lookup_prefix(value, 1) == NULL)
-		return NULL;
+		return this->root;
 
  	// k is the index of the last level where a prefix was found.
 	size_t i = 1, j = this->n, m, k = 1;
