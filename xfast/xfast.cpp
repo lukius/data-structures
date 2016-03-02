@@ -1,6 +1,6 @@
 #include "xfast.h"
 #include "cuckoo.h"
-#include <list>
+#include <stack>
 #include <cmath>
 #include <assert.h>
 #include <stddef.h>
@@ -22,17 +22,31 @@ XFastTrie::XFastTrie(size_t U) : U(U)
 
 XFastTrie::XFastTrie(const XFastTrie &t)
 {
-	// TODO
+	this->copy_from(t);
 }
 
 XFastTrie::~XFastTrie()
 {
-	// TODO
+	this->erase();
 }
 
 void XFastTrie::erase()
 {
-	// TODO
+	stack<TrieNode*> nodes;
+
+	nodes.push(this->root);
+
+	while(!nodes.empty())
+	{
+		TrieNode *node = nodes.top();
+		nodes.pop();
+		if(node->children[0] != NULL)
+			nodes.push(node->children[0]);
+		if(node->children[1] != NULL)
+			nodes.push(node->children[1]);
+		delete node;
+	}
+
 }
 
 void XFastTrie::copy_from(const XFastTrie &t)
@@ -139,9 +153,9 @@ void XFastTrie::remove(int value)
 			successor = current->next;
 			predecessor = current->prev;
 
-			if(predecessor)
+			if(predecessor != NULL)
 				predecessor->next = successor;
-			if(successor)
+			if(successor != NULL)
 				successor->prev = predecessor;
 		}
 		else

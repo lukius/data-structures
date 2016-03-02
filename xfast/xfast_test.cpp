@@ -32,6 +32,7 @@ protected:
 		node01->children[0] = node02;
 		node01->succ = node53;
 
+		node02->children[1] = node13;
 		node02->succ = node13;
 
 		node41->children[1] = node62;
@@ -71,29 +72,14 @@ protected:
 		T.insert_prefix(7, node62, 2);
 		T.insert_prefix(7, node73, 3);
 		T.insert_prefix(6, node63, 3);
-
-		nodes.push_back(root);
-		nodes.push_back(node01);
-		nodes.push_back(node02);
-		nodes.push_back(node13);
-		nodes.push_back(node41);
-		nodes.push_back(node42);
-		nodes.push_back(node62);
-		nodes.push_back(node53);
-		nodes.push_back(node63);
-		nodes.push_back(node73);
 	}
 
 	virtual void TearDown()
 	{
-		for(size_t i = 0; i < this->nodes.size(); ++i)
-			delete nodes[i];
-
 		delete this->T;
 	}
 
 	XFastTrie *T;
-	vector<TrieNode*> nodes;
 };
 
 TEST_F(XFastTrieTest, digits_test)
