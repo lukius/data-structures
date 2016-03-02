@@ -28,13 +28,14 @@ private:
 
 	std::vector<int> *binary_digits(int) const;
 
-	TrieNode *lookup_prefix(int, size_t) const;
 	TrieNode *search_longest_prefix_index(int) const;
 	TrieNode *successor_node(int) const;
 	TrieNode *predecessor_node(int) const;
 	TrieNode *new_leaf_node(int, TrieNode*, TrieNode*);
 
+	TrieNode *lookup_prefix(int, size_t) const;
 	void insert_prefix(int, TrieNode*, size_t);
+	void remove_prefix(int, size_t);
 
 	// Friend test cases (ugly)
 	friend class XFastTrieTest;

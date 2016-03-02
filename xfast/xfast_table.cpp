@@ -38,3 +38,10 @@ TrieNode *XFastTable::lookup(int value) const
 	const XFastTableNode *node = _CuckooHashTable<XFastTableNode, XFastHasher>::lookup(dummy_node);
 	return node == NULL ? NULL : node->second;
 }
+
+void XFastTable::remove(int value)
+{
+	TrieNode dummy_trie_node;
+	XFastTableNode dummy_node {value, &dummy_trie_node};
+	_CuckooHashTable<XFastTableNode, XFastHasher>::remove(dummy_node);
+}

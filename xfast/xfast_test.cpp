@@ -193,3 +193,65 @@ TEST_F(XFastTrieTest, insertion_test)
 	EXPECT_EQ(T.predecessor(8), 7);
 	EXPECT_EQ(T.predecessor(7), 6);
 }
+
+TEST_F(XFastTrieTest, deletion_test)
+{
+	XFastTrie T(15);
+
+	EXPECT_TRUE(T.is_empty());
+
+	T.insert(7);
+
+	EXPECT_FALSE(T.is_empty());
+	EXPECT_TRUE(T.contains(7));
+
+	// Remove a complete branch
+	T.remove(7);
+
+	EXPECT_TRUE(T.is_empty());
+	EXPECT_FALSE(T.contains(7));
+
+	T.insert(7);
+	T.insert(4);
+	// Remove part of a branch (leave shared prefix nodes)
+	T.remove(7);
+
+	EXPECT_FALSE(T.is_empty());
+	EXPECT_FALSE(T.contains(7));
+	EXPECT_TRUE(T.contains(4));
+	EXPECT_EQ(T.get_min(), 4);
+	EXPECT_EQ(T.get_max(), 4);
+
+	T.insert(15);
+	T.insert(0);
+	T.remove(0);
+
+	EXPECT_FALSE(T.is_empty());
+	EXPECT_FALSE(T.contains(0));
+	EXPECT_TRUE(T.contains(4));
+	EXPECT_TRUE(T.contains(15));
+	EXPECT_EQ(T.get_min(), 4);
+	EXPECT_EQ(T.get_max(), 15);
+	EXPECT_EQ(T.successor(4), 15);
+	EXPECT_EQ(T.successor(10), 15);
+	EXPECT_EQ(T.predecessor(15), 4);
+	EXPECT_EQ(T.predecessor(10), 4);
+
+	T.remove(4);
+
+	EXPECT_FALSE(T.is_empty());
+	EXPECT_FALSE(T.contains(0));
+	EXPECT_FALSE(T.contains(4));
+	EXPECT_TRUE(T.contains(15));
+	EXPECT_EQ(T.get_min(), 15);
+	EXPECT_EQ(T.get_max(), 15);
+	EXPECT_EQ(T.successor(4), 15);
+	EXPECT_EQ(T.successor(10), 15);
+
+	T.remove(15);
+
+	EXPECT_TRUE(T.is_empty());
+	EXPECT_FALSE(T.contains(0));
+	EXPECT_FALSE(T.contains(4));
+	EXPECT_FALSE(T.contains(15));
+}

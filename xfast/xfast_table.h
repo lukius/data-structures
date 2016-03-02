@@ -49,6 +49,8 @@ class XFastTable : public _CuckooHashTable<XFastTableNode, XFastHasher>
 public:
 
 	TrieNode *lookup(int) const;
+
+	void remove(int);
 };
 
 #endif

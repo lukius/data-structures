@@ -92,6 +92,7 @@ void XFastTrie::insert(int value)
 			if(digit == 0)
 			{
 				current->succ = NULL;
+				// TODO: current->pred != NULL && value < current->pred->value
 				if(current->pred == NULL && current->children[1] == NULL)
 					current->pred = leaf_node;
 			}
@@ -118,7 +119,65 @@ void XFastTrie::insert(int value)
 
 void XFastTrie::remove(int value)
 {
-	// TODO
+	if(!this->contains(value))
+		return;
+
+	TrieNode *current, *previous, *successor, *predecessor;
+
+	// Iterate nodes in a bottom-up fashion. Keep deleting them until we
+	// find one that has the other branch active. We stop there since
+	// the branch is still needed by other values in the data structure.
+	for(ssize_t i = this->n; i >= 0; --i)
+	{
+		// When i = 0, we have reached the root of the trie. Otherwise,
+		// there must be a node holding the i-th prefix of the value.
+		current = i == 0 ? this->root : this->lookup_prefix(value, i);
+
+		if(static_cast<size_t>(i) == this->n)
+		{
+			// Leaf node. Reconnect neighbors in the linked list.
+			successor = current->next;
+			predecessor = current->prev;
+
+			if(predecessor)
+				predecessor->next = successor;
+			if(successor)
+				successor->prev = predecessor;
+		}
+		else
+		{
+			// Internal node. Clear left or right child, as appropriate, and
+			// check whether we should stop. If not, set successor/predecessor
+			// pointers accordingly.
+			if(current->children[0] == previous)
+			{
+				current->children[0] = NULL;
+				if(current->children[1] != NULL)
+				{
+					current->succ = successor;
+					break;
+				}
+			}
+			else if(current->children[1] == previous)
+			{
+				current->children[1] = NULL;
+				if(current->children[0] != NULL)
+				{
+					current->pred = predecessor;
+					break;
+				}
+			}
+		}
+
+		// Non-root nodes should be deleted and their prefixes removed from the
+		// hash tables.
+		if(i != 0)
+		{
+			this->remove_prefix(value, i);
+			delete current;
+			previous = current;
+		}
+	}
 }
 
 bool XFastTrie::contains(int value) const
@@ -259,6 +318,12 @@ void XFastTrie::insert_prefix(int value, TrieNode *node, size_t i)
 	int prefix = PREFIX(value, i);
 	XFastTableNode table_node {prefix, node};
 	this->hash_tables[i].insert(table_node);
+}
+
+void XFastTrie::remove_prefix(int value, size_t i)
+{
+	int prefix = PREFIX(value, i);
+	this->hash_tables[i].remove(prefix);
 }
 
 TrieNode *XFastTrie::search_longest_prefix_index(int value) const
