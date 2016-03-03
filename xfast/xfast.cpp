@@ -7,8 +7,8 @@
 
 using namespace std;
 
-#define N_BITS(n)		(size_t)ceil((std::log(n+1)/std::log(2)))
-#define PREFIX(x, i)	((x >> (this->n-i)) << (this->n-i))
+#define N_BITS(n)	(size_t)ceil((std::log(n+1)/std::log(2)))
+#define PREFIX(x,i)	((x >> (this->n-i)) << (this->n-i))
 
 
 XFastTrie::XFastTrie(size_t U) : U(U)
