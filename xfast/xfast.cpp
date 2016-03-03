@@ -66,7 +66,6 @@ void XFastTrie::insert(int value)
 	TrieNode *successor_node = this->successor_node(value);
 	TrieNode *predecessor_node = this->predecessor_node(value);
 	TrieNode *leaf_node = this->new_leaf_node(value, successor_node, predecessor_node);
-
 	TrieNode *current = this->root;
 
 	// Iterate through the digits and update the trie.
@@ -136,7 +135,9 @@ void XFastTrie::remove(int value)
 	if(!this->contains(value))
 		return;
 
-	TrieNode *current, *previous, *successor, *predecessor;
+	TrieNode *current, *leaf_node, *previous, *successor, *predecessor;
+
+	bool should_delete_node = true, previous_node_deleted;
 
 	// Iterate nodes in a bottom-up fashion. Keep deleting them until we
 	// find one that has the other branch active. We stop there since
@@ -147,9 +148,13 @@ void XFastTrie::remove(int value)
 		// there must be a node holding the i-th prefix of the value.
 		current = i == 0 ? this->root : this->lookup_prefix(value, i);
 
+		// Ensure that the trie's root is never deleted.
+		should_delete_node = should_delete_node && (i != 0);
+
 		if(static_cast<size_t>(i) == this->n)
 		{
 			// Leaf node. Reconnect neighbors in the linked list.
+			leaf_node = current;
 			successor = current->next;
 			predecessor = current->prev;
 
@@ -165,33 +170,65 @@ void XFastTrie::remove(int value)
 			// pointers accordingly.
 			if(current->children[0] == previous)
 			{
-				current->children[0] = NULL;
-				if(current->children[1] != NULL)
+				if(previous_node_deleted)
 				{
-					current->succ = successor;
-					break;
+					current->children[0] = NULL;
+					if(current->children[1] != NULL)
+					{
+						// This node should survive as its right child still
+						// holds data. Since the left child is no longer
+						// present, we must set the successor pointer to the
+						// lowest value in the right subtree, which by
+						// definition is the successor of the value being
+						// removed.
+						current->succ = successor;
+						should_delete_node = false;
+					}
 				}
+
+				// Update node predecessor: the highest value in the left tree
+				// is now the predecessor of the value being removed.
+				if(current->pred == leaf_node)
+					current->pred =  predecessor;
 			}
 			else if(current->children[1] == previous)
 			{
-				current->children[1] = NULL;
-				if(current->children[0] != NULL)
+				// Analogous to previous case.
+				if(previous_node_deleted)
 				{
-					current->pred = predecessor;
-					break;
+					current->children[1] = NULL;
+					if(current->children[0] != NULL)
+					{
+						current->pred = predecessor;
+						should_delete_node = false;
+					}
 				}
+
+				if(current->succ == leaf_node)
+					current->succ =  successor;
 			}
 		}
 
 		// Non-root nodes should be deleted and their prefixes removed from the
 		// hash tables.
-		if(i != 0)
+		if(should_delete_node)
 		{
 			this->remove_prefix(value, i);
-			delete current;
-			previous = current;
+			previous_node_deleted = true;
+			// Since top level nodes might need to have their successors/
+			// predecessors adjusted, depending on whether they point to the
+			// leaf node or not, we delay the actual deletion of the
+			// leaf node.
+			if(static_cast<size_t>(i) != this->n)
+				delete current;
 		}
+		else
+			previous_node_deleted = false;
+
+		previous = current;
 	}
+
+	delete leaf_node;
 }
 
 bool XFastTrie::contains(int value) const

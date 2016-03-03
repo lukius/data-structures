@@ -13,7 +13,6 @@ protected:
 		this->T = new XFastTrie(7);
 		XFastTrie &T = *this->T;
 
-		TrieNode *root = new TrieNode;
 		TrieNode *node01 = new TrieNode;
 		TrieNode *node02 = new TrieNode;
 		TrieNode *node13 = new TrieNode;
@@ -23,8 +22,7 @@ protected:
 		TrieNode *node53 = new TrieNode;
 		TrieNode *node63 = new TrieNode;
 		TrieNode *node73 = new TrieNode;
-
-		T.root = root;
+		TrieNode *root = T.root;
 
 		root->children[1] = node41;
 		root->children[0] = node01;
