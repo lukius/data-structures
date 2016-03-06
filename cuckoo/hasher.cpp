@@ -20,10 +20,33 @@ Hasher::Hasher(ulong w) : w(w)
 	this->update();
 }
 
+Hasher::Hasher(const Hasher &h)
+{
+	this->copy_from(h);
+}
+
 Hasher::~Hasher()
+{
+	this->erase();
+}
+
+void Hasher::erase()
 {
 	delete this->mt;
 	delete this->d;
+}
+
+void Hasher::copy_from(const Hasher &h)
+{
+	std::random_device rd;
+	this->mt = new std::mt19937(rd());
+	this->d = new std::uniform_int_distribution<ulong>(1, W-1);
+
+	this->w = h.w;
+	this->q = h.q;
+	this->a1 = h.a1;
+	this->a2 = h.a2;
+	this->a3 = h.a3;
 }
 
 void Hasher::update()
@@ -79,18 +102,8 @@ const Hasher& Hasher::operator=(const Hasher& h)
 {
 	if( this != &h )
 	{
-		delete this->d;
-		delete this->mt;
-
-		std::random_device rd;
-		this->mt = new std::mt19937(rd());
-		this->d = new std::uniform_int_distribution<ulong>(1, W-1);
-
-		this->w = h.w;
-		this->q = h.q;
-		this->a1 = h.a1;
-		this->a2 = h.a2;
-		this->a3 = h.a3;
+		this->erase();
+		this->copy_from(h);
 	}
 
 	return *this;

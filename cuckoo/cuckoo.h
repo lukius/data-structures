@@ -155,7 +155,7 @@ void _CuckooHashTable<T, H>::copy_from(const _CuckooHashTable &h)
 	this->h_2 = h.h_2;
 
 	this->T_1 = new Table<T>(h.T_1->size());
-	this->T_2 = new Table<T>(h.T_1->size());
+	this->T_2 = new Table<T>(h.T_2->size());
 	this->L = new NodeList<T>();
 
 	for(it_h_L = h.L->begin(); it_h_L != h.L->end(); ++it_h_L)
@@ -169,8 +169,8 @@ void _CuckooHashTable<T, H>::copy_from(const _CuckooHashTable &h)
 
 		ListNode<T> list_node {key, table, index};
 		this->L->push_back(list_node);
-
-		it_L = this->L->end()--;
+		it_L = this->L->end();
+		it_L--;
 		new_node = new TableNode<T> {key, it_L};
 
 		t[index] = new_node;

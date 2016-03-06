@@ -1,7 +1,9 @@
 #include "xfast.h"
+#include "xfast_table.h"
 #include "cuckoo.h"
 #include <stack>
 #include <cmath>
+#include <unordered_map>
 #include <assert.h>
 #include <stddef.h>
 
@@ -18,40 +20,6 @@ XFastTrie::XFastTrie(size_t U) : U(U)
 	this->hash_tables.resize(this->n + 1);
 
 	this->root = new TrieNode();
-}
-
-XFastTrie::XFastTrie(const XFastTrie &t)
-{
-	this->copy_from(t);
-}
-
-XFastTrie::~XFastTrie()
-{
-	this->erase();
-}
-
-void XFastTrie::erase()
-{
-	stack<TrieNode*> nodes;
-
-	nodes.push(this->root);
-
-	while(!nodes.empty())
-	{
-		TrieNode *node = nodes.top();
-		nodes.pop();
-		if(node->children[0] != NULL)
-			nodes.push(node->children[0]);
-		if(node->children[1] != NULL)
-			nodes.push(node->children[1]);
-		delete node;
-	}
-
-}
-
-void XFastTrie::copy_from(const XFastTrie &t)
-{
-	// TODO
 }
 
 // Expected O(log U) time complexity since insertion in cuckoo hash tables
@@ -402,6 +370,18 @@ TrieNode *XFastTrie::search_longest_prefix_index(int value) const
 	return this->lookup_prefix(value, k);
 }
 
+// Copy constructor, destructor, copy assignment operator and helper methods.
+
+XFastTrie::XFastTrie(const XFastTrie &t)
+{
+	this->copy_from(t);
+}
+
+XFastTrie::~XFastTrie()
+{
+	this->erase();
+}
+
 const XFastTrie &XFastTrie::operator=(const XFastTrie& t)
 {
 	if(this != &t)
@@ -411,4 +391,139 @@ const XFastTrie &XFastTrie::operator=(const XFastTrie& t)
 	}
 
 	return *this;
+}
+
+void XFastTrie::erase()
+{
+	stack<TrieNode*> nodes;
+
+	nodes.push(this->root);
+
+	while(!nodes.empty())
+	{
+		TrieNode *node = nodes.top();
+		nodes.pop();
+		if(node->children[0] != NULL)
+			nodes.push(node->children[0]);
+		if(node->children[1] != NULL)
+			nodes.push(node->children[1]);
+		delete node;
+	}
+
+	this->hash_tables.clear();
+}
+
+void XFastTrie::copy_from(const XFastTrie &t)
+{
+	// As this is a complex data structure, the copy algorithm works in three
+	// phases:
+	//  1. Traverse the trie and create new nodes with the same structure.
+	//     Map each original node to the one that was created in a dictionary.
+	//  2. Update predecessors/successors and linked leaf nodes. For this,
+	//     traverse the new trie and use the dictionary to map the pointers.
+	//  3. Update hash tables, inserting each prefix at a time and using again
+	//     the dictionary to insert proper node pointers.
+
+	unordered_map<const TrieNode*, TrieNode*> node_map;
+
+	this->n = t.n;
+	this->U = t.U;
+
+	this->copy_trie(t.root, &this->root, node_map);
+	this->update_trie(node_map);
+	this->update_hash_tables(t, node_map);
+}
+
+void XFastTrie::copy_trie(const TrieNode *source,
+		TrieNode **dest,
+		unordered_map<const TrieNode*, TrieNode*> &node_map)
+{
+	TrieNode *new_node = new TrieNode();
+
+	new_node->prev = source->prev;
+	new_node->next = source->next;
+	new_node->pred = source->pred;
+	new_node->succ = source->succ;
+	new_node->is_leaf = source->is_leaf;
+	new_node->value = source->value;
+
+	if(source->children[0] != NULL)
+		this->copy_trie(source->children[0], &new_node->children[0], node_map);
+
+	if(source->children[1] != NULL)
+		this->copy_trie(source->children[1], &new_node->children[1], node_map);
+
+	*dest = new_node;
+
+	node_map.insert({source, new_node});
+}
+
+void XFastTrie::update_trie(const unordered_map<const TrieNode*, TrieNode*> &node_map)
+{
+	stack<TrieNode*> nodes;
+	TrieNode *current;
+	unordered_map<const TrieNode*, TrieNode*>::const_iterator it;
+
+	nodes.push(this->root);
+
+	while(!nodes.empty())
+	{
+		current = nodes.top();
+		nodes.pop();
+		if(current->children[0] != NULL)
+			nodes.push(current->children[0]);
+		if(current->children[1] != NULL)
+			nodes.push(current->children[1]);
+
+		if(current->pred != NULL)
+		{
+			it = node_map.find(current->pred);
+			assert(it != node_map.end());
+			current->pred = it->second;
+		}
+
+		if(current->succ != NULL)
+		{
+			it = node_map.find(current->succ);
+			assert(it != node_map.end());
+			current->succ = it->second;
+		}
+
+		if(current->prev != NULL)
+		{
+			it = node_map.find(current->prev);
+			assert(it != node_map.end());
+			current->prev = it->second;
+		}
+
+		if(current->next != NULL)
+		{
+			it = node_map.find(current->next);
+			assert(it != node_map.end());
+			current->next = it->second;
+		}
+	}
+}
+
+void XFastTrie::update_hash_tables(const XFastTrie &t,
+		const unordered_map<const TrieNode*, TrieNode*> &node_map)
+{
+	int prefix;
+	vector<const XFastTableNode*> items;
+	unordered_map<const TrieNode*, TrieNode*>::const_iterator it;
+
+	this->hash_tables.resize(t.hash_tables.size());
+
+	for(size_t i = 0; i < this->hash_tables.size(); ++i)
+	{
+		// TODO: implement iterators to improve efficiency.
+		items = t.hash_tables[i].items();
+		for(size_t j = 0; j < items.size(); ++j)
+		{
+			prefix = items[j]->first;
+			it = node_map.find(items[j]->second);
+			assert(it != node_map.end());
+			this->hash_tables[i].insert({prefix, it->second});
+		}
+	}
 }

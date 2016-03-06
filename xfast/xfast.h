@@ -4,6 +4,7 @@
 #include "cuckoo.h"
 #include "gtest/gtest_prod.h"
 #include <vector>
+#include <unordered_map>
 #include <stddef.h>
 #include "xfast_table.h"
 
@@ -25,6 +26,11 @@ private:
 
 	void erase();
 	void copy_from(const XFastTrie&);
+	void copy_trie(const TrieNode*, TrieNode**,
+			std::unordered_map<const TrieNode*, TrieNode*>&);
+	void update_trie(const std::unordered_map<const TrieNode*, TrieNode*>&);
+	void update_hash_tables(const XFastTrie&,
+			const std::unordered_map<const TrieNode*, TrieNode*>&);
 
 	std::vector<int> *binary_digits(int) const;
 

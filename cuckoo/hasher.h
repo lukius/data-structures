@@ -19,12 +19,16 @@ private:
 	ulong rand_odd() const;
 	ulong hash_with(ulong, ulong) const;
 
+	void erase();
+	void copy_from(const Hasher&);
+
 protected:
 	// Just to be able to test this class' behavior.
 	ulong w, q, a1, a2, a3;
 
 public:
 	Hasher(ulong w);
+	Hasher(const Hasher&);
 	~Hasher();
 
 	void update();

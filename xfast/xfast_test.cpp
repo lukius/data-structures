@@ -239,3 +239,36 @@ TEST_F(XFastTrieTest, deletion_test)
 	EXPECT_FALSE(T.contains(4));
 	EXPECT_FALSE(T.contains(15));
 }
+
+TEST_F(XFastTrieTest, copy_test)
+{
+	XFastTrie T(15), S(7);
+
+	T.insert(2);
+	T.insert(14);
+	T.insert(15);
+	T.insert(6);
+
+	S.insert(1);
+	S.insert(3);
+
+	S = T;
+
+	EXPECT_FALSE(S.is_empty());
+	EXPECT_TRUE(S.contains(2));
+	EXPECT_TRUE(S.contains(14));
+	EXPECT_TRUE(S.contains(15));
+	EXPECT_TRUE(S.contains(6));
+	EXPECT_FALSE(S.contains(1));
+	EXPECT_FALSE(S.contains(3));
+
+	XFastTrie U(S);
+
+	EXPECT_FALSE(U.is_empty());
+	EXPECT_TRUE(U.contains(2));
+	EXPECT_TRUE(U.contains(14));
+	EXPECT_TRUE(U.contains(15));
+	EXPECT_TRUE(U.contains(6));
+	EXPECT_FALSE(U.contains(1));
+	EXPECT_FALSE(U.contains(3));
+}
