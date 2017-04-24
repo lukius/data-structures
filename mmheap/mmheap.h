@@ -72,14 +72,14 @@ public:
 template<class T>
 MinMaxHeap<T>::MinMaxHeap() :
 	heap(new std::vector<T>),
-last_level_type(_MAX_LEVEL)
+	last_level_type(_MAX_LEVEL)
 {
 }
 
 template<class T>
 MinMaxHeap<T>::MinMaxHeap(const MinMaxHeap<T> &h) :
 	heap(new std::vector<T>(*h.heap)),
-last_level_type(_MAX_LEVEL)
+	last_level_type(_MAX_LEVEL)
 {
 }
 
