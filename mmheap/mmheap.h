@@ -8,10 +8,10 @@
 
 typedef bool LevelType;
 
-#define _HEAP					(*(this->heap))
+#define _HEAP				(*(this->heap))
 #define _PARENT_IDX(i)			((i-1)/2)
 #define _GRANDPARENT_IDX(i)		(_PARENT_IDX(_PARENT_IDX(i)))
-#define _LAST_IDX				(this->heap->size()-1)
+#define _LAST_IDX			(this->heap->size()-1)
 // h[i] has children iff 2i + 1 < |h| => i = (|h|-2)/2 is the last non-leaf
 // node.
 #define _LAST_NON_LEAF_IDX		((this->heap->size()-2)/2)
@@ -19,13 +19,13 @@ typedef bool LevelType;
 #define _HAS_PARENT(i)			(i > 0)
 #define _HAS_GRANDPARENT(i)		(i > 2)
 #define _HAS_CHILDREN(i)		(2*i+1 < this->heap->size())
-#define _HAS_GRANDCHILDREN(i)	(4*i+3 < this->heap->size())
+#define _HAS_GRANDCHILDREN(i)		(4*i+3 < this->heap->size())
 
 // Check whether a new tree level starts at index i. For this, just check
 // if (i+1) is a power of 2.
 #define _NEW_LEVEL_AT(i)		(((i+1)&(i)) == 0)
-#define _MAX_LEVEL				(false)
-#define _MIN_LEVEL				(true)
+#define _MAX_LEVEL			(false)
+#define _MIN_LEVEL			(true)
 
 
 template<class T>
@@ -286,7 +286,7 @@ void MinMaxHeap<T>::_sift_down_min(size_t i)
 	T heap_i = _HEAP[i];
 
 	while(	_HAS_GRANDCHILDREN(i) &&
-			heap_i > (_HEAP[j = this->_min_grandchild_idx(i)]))
+		heap_i > (_HEAP[j = this->_min_grandchild_idx(i)]))
 	{
 		std::swap(_HEAP[i], _HEAP[j]);
 		i = j;
@@ -307,7 +307,7 @@ void MinMaxHeap<T>::_sift_down_max(size_t i)
 	T heap_i = _HEAP[i];
 
 	while(	_HAS_GRANDCHILDREN(i) &&
-			heap_i < (_HEAP[j = this->_max_grandchild_idx(i)]))
+		heap_i < (_HEAP[j = this->_max_grandchild_idx(i)]))
 	{
 		std::swap(_HEAP[i], _HEAP[j]);
 		i = j;
