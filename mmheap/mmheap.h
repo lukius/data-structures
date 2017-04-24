@@ -8,17 +8,24 @@
 
 typedef bool LevelType;
 
-#define _HEAP (*(this->heap))
-#define _PARENT_IDX(i) ((i-1)/2)
-#define _GRANDPARENT_IDX(i) (_PARENT_IDX(_PARENT_IDX(i)))
-#define _LAST_IDX (this->heap->size()-1)
-#define _HAS_PARENT(i) (i > 0)
-#define _HAS_GRANDPARENT(i) (i > 2)
-#define _HAS_CHILDREN(i) (2*i+1 < this->heap->size())
-#define _HAS_GRANDCHILDREN(i) (4*i+3 < this->heap->size())
-#define _MAX_LEVEL (false)
-#define _MIN_LEVEL (true)
-#define _IS_MAX_LEVEL(t) (!t)
+#define _HEAP					(*(this->heap))
+#define _PARENT_IDX(i)			((i-1)/2)
+#define _GRANDPARENT_IDX(i)		(_PARENT_IDX(_PARENT_IDX(i)))
+#define _LAST_IDX				(this->heap->size()-1)
+// h[i] has children iff 2i + 1 < |h| => i = (|h|-2)/2 is the last non-leaf
+// node.
+#define _LAST_NON_LEAF_IDX		((this->heap->size()-2)/2)
+
+#define _HAS_PARENT(i)			(i > 0)
+#define _HAS_GRANDPARENT(i)		(i > 2)
+#define _HAS_CHILDREN(i)		(2*i+1 < this->heap->size())
+#define _HAS_GRANDCHILDREN(i)	(4*i+3 < this->heap->size())
+
+// Check whether a new tree level starts at index i. For this, just check
+// if (i+1) is a power of 2.
+#define _NEW_LEVEL_AT(i)		(((i+1)&(i)) == 0)
+#define _MAX_LEVEL				(false)
+#define _MIN_LEVEL				(true)
 
 
 template<class T>
@@ -28,9 +35,7 @@ class MinMaxHeap
 
 	LevelType last_level_type;
 
-	bool _new_level_at(size_t) const;
-
-	void _sift_up();
+	void _sift_up(size_t, LevelType);
 	void _sift_up_min(size_t);
 	void _sift_up_max(size_t);
 
@@ -66,22 +71,27 @@ public:
 
 template<class T>
 MinMaxHeap<T>::MinMaxHeap() :
-heap(new std::vector<T>),
+	heap(new std::vector<T>),
 last_level_type(_MAX_LEVEL)
 {
 }
 
 template<class T>
 MinMaxHeap<T>::MinMaxHeap(const MinMaxHeap<T> &h) :
-heap(new std::vector<T>(*h.heap)),
+	heap(new std::vector<T>(*h.heap)),
 last_level_type(_MAX_LEVEL)
 {
 }
 
 template<class T>
 MinMaxHeap<T>::MinMaxHeap(const std::vector<T> &v) :
-heap(new std::vector<T>(v))
+	heap(new std::vector<T>(v))
 {
+	// In essence, Floyd's linear time algorithm to build binary heaps. The
+	// difference is that sift_down takes the min-max heap properties into
+	// account. For this, we also need to know whether the last level is
+	// a max or min level. This is done first (in logarithmic time).
+
 	size_t n = this->size();
 	this->last_level_type = _MAX_LEVEL;
 	while(n)
@@ -91,10 +101,10 @@ heap(new std::vector<T>(v))
 	}
 
 	LevelType curr_level_type = !this->last_level_type;
-	for(ssize_t i = (this->size()-2)/2; i >= 0; i--)
+	for(ssize_t i = _LAST_NON_LEAF_IDX; i >= 0; i--)
 	{
 		this->_sift_down(i, curr_level_type);
-		if(this->_new_level_at(i))
+		if(_NEW_LEVEL_AT(i))
 			curr_level_type = !curr_level_type;
 	}
 }
@@ -170,36 +180,18 @@ void MinMaxHeap<T>::insert(const T &value)
 	// O(log n) running time for insert (being n the number of nodes in the
 	// heap).
 	this->heap->push_back(value);
-	this->_sift_up();
-}
-
-template<class T>
-bool MinMaxHeap<T>::_new_level_at(size_t i) const
-{
-	// Check whether a new tree level starts at index i. For this, just check
-	// if (i+1) is a power of 2.
-	return  (i & (i+1)) == 0;
-}
-
-template<class T>
-void MinMaxHeap<T>::_sift_up()
-{
-	size_t i = _LAST_IDX, j;
-	T heap_i = _HEAP[i];
-	if(this->_new_level_at(i))
+	if(_NEW_LEVEL_AT(_LAST_IDX))
 		this->last_level_type = !this->last_level_type;
+	this->_sift_up(_LAST_IDX, this->last_level_type);
+}
 
-	if(_IS_MAX_LEVEL(this->last_level_type))
-	{
-		if(_HAS_PARENT(i) && heap_i < (_HEAP[j = _PARENT_IDX(i)]))
-		{
-			std::swap(_HEAP[i], _HEAP[j]);
-			this->_sift_up_min(j);
-		}
-		else
-			this->_sift_up_max(i);
-	}
-	else
+template<class T>
+void MinMaxHeap<T>::_sift_up(size_t i, LevelType level_type)
+{
+	size_t j;
+	T heap_i = _HEAP[i];
+
+	if(level_type == _MIN_LEVEL)
 	{
 		if(_HAS_PARENT(i) && heap_i > (_HEAP[j = _PARENT_IDX(i)]))
 		{
@@ -208,6 +200,16 @@ void MinMaxHeap<T>::_sift_up()
 		}
 		else
 			this->_sift_up_min(i);
+	}
+	else
+	{
+		if(_HAS_PARENT(i) && heap_i < (_HEAP[j = _PARENT_IDX(i)]))
+		{
+			std::swap(_HEAP[i], _HEAP[j]);
+			this->_sift_up_min(j);
+		}
+		else
+			this->_sift_up_max(i);
 	}
 }
 
@@ -245,7 +247,7 @@ T MinMaxHeap<T>::extract_min()
 	T min = this->peek_min();
 	std::swap(_HEAP[0], _HEAP[_LAST_IDX]);
 	this->heap->erase(this->heap->begin() + _LAST_IDX);
-	if(this->_new_level_at(_LAST_IDX+1))
+	if(_NEW_LEVEL_AT(_LAST_IDX+1))
 		this->last_level_type = !this->last_level_type;
 	this->_sift_down_min(0);
 
@@ -261,7 +263,7 @@ T MinMaxHeap<T>::extract_max()
 	T max = _HEAP[max_idx];
 	std::swap(_HEAP[max_idx], _HEAP[_LAST_IDX]);
 	this->heap->erase(this->heap->begin() + _LAST_IDX);
-	if(this->_new_level_at(_LAST_IDX+1))
+	if(_NEW_LEVEL_AT(_LAST_IDX+1))
 		this->last_level_type = !this->last_level_type;
 	this->_sift_down_max(max_idx);
 
@@ -283,7 +285,7 @@ void MinMaxHeap<T>::_sift_down_min(size_t i)
 	size_t j;
 	T heap_i = _HEAP[i];
 
-	while(_HAS_GRANDCHILDREN(i) &&
+	while(	_HAS_GRANDCHILDREN(i) &&
 			heap_i > (_HEAP[j = this->_min_grandchild_idx(i)]))
 	{
 		std::swap(_HEAP[i], _HEAP[j]);
@@ -293,8 +295,8 @@ void MinMaxHeap<T>::_sift_down_min(size_t i)
 			std::swap(_HEAP[i], _HEAP[j]);
 	}
 
-	if(_HAS_CHILDREN(i) &&
-			heap_i > (_HEAP[j = this->_min_child_idx(i)]))
+	if(	_HAS_CHILDREN(i) &&
+		heap_i > (_HEAP[j = this->_min_child_idx(i)]))
 		std::swap(_HEAP[i], _HEAP[j]);
 }
 
@@ -304,7 +306,7 @@ void MinMaxHeap<T>::_sift_down_max(size_t i)
 	size_t j;
 	T heap_i = _HEAP[i];
 
-	while(_HAS_GRANDCHILDREN(i) &&
+	while(	_HAS_GRANDCHILDREN(i) &&
 			heap_i < (_HEAP[j = this->_max_grandchild_idx(i)]))
 	{
 		std::swap(_HEAP[i], _HEAP[j]);
@@ -314,14 +316,16 @@ void MinMaxHeap<T>::_sift_down_max(size_t i)
 			std::swap(_HEAP[i], _HEAP[j]);
 	}
 
-	if(_HAS_CHILDREN(i) &&
-			heap_i < (_HEAP[j = this->_max_child_idx(i)]))
+	if(	_HAS_CHILDREN(i) &&
+		heap_i < (_HEAP[j = this->_max_child_idx(i)]))
 		std::swap(_HEAP[i], _HEAP[j]);
 }
 
 template<class T>
 size_t MinMaxHeap<T>::_min_child_idx(size_t i) const
 {
+	assert(_HAS_CHILDREN(i));
+
 	size_t j, min, n = this->heap->size();
 	j = min = 2*i + 1;
 
@@ -334,6 +338,8 @@ size_t MinMaxHeap<T>::_min_child_idx(size_t i) const
 template<class T>
 size_t MinMaxHeap<T>::_max_child_idx(size_t i) const
 {
+	assert(_HAS_CHILDREN(i));
+
 	size_t j, max, n = this->heap->size();
 	j = max = 2*i + 1;
 
@@ -346,11 +352,11 @@ size_t MinMaxHeap<T>::_max_child_idx(size_t i) const
 template<class T>
 size_t MinMaxHeap<T>::_min_grandchild_idx(size_t i) const
 {
+	assert(_HAS_GRANDCHILDREN(i));
+
 	size_t j, min, n = this->heap->size();
 	j = min = 4*i + 3;
 
-	if(++j < n && _HEAP[min] > _HEAP[j])
-		min = j;
 	if(++j < n && _HEAP[min] > _HEAP[j])
 		min = j;
 	if(++j < n && _HEAP[min] > _HEAP[j])
@@ -364,11 +370,11 @@ size_t MinMaxHeap<T>::_min_grandchild_idx(size_t i) const
 template<class T>
 size_t MinMaxHeap<T>::_max_grandchild_idx(size_t i) const
 {
+	assert(_HAS_GRANDCHILDREN(i));
+
 	size_t j, max, n = this->heap->size();
 	j = max = 4*i + 3;
 
-	if(++j < n && _HEAP[max] < _HEAP[j])
-		max = j;
 	if(++j < n && _HEAP[max] < _HEAP[j])
 		max = j;
 	if(++j < n && _HEAP[max] < _HEAP[j])
