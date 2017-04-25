@@ -30,7 +30,7 @@
 
 #define EPSILON 7/5.
 
-#define MAX_LOOP	 		((int)ceil(3*LOG(this->T_1->size(), EPSILON)))
+#define MAX_LOOP	 	((int)ceil(3*LOG(this->T_1->size(), EPSILON)))
 #define MAX_LOAD_FACTOR		(1./(1 + EPSILON))
 
 #define INITIAL_SIZE 2
