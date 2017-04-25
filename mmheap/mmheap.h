@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <functional>
 #include <stddef.h>
 #include <vector>
 
@@ -29,6 +30,35 @@ typedef bool LevelType;
 
 
 template<class T>
+struct SiftFunctor
+{
+	SiftFunctor(const std::vector<T>& v) : v(v) {};
+	virtual ~SiftFunctor() {};
+	virtual bool compare(const T&, const T&) const = 0;
+	virtual size_t grandchild_idx(size_t) const;
+	virtual size_t child_idx(size_t) const;
+private:
+	const std::vector<T> &v;
+};
+
+
+template<class T>
+struct LessFunctor : public SiftFunctor<T>
+{
+	LessFunctor(const std::vector<T>& v) : SiftFunctor<T>(v) {};
+	bool compare(const T& x, const T& y) const { return x < y; };
+};
+
+
+template<class T>
+struct GreaterFunctor : public SiftFunctor<T>
+{
+	GreaterFunctor(const std::vector<T>& v) : SiftFunctor<T>(v) {};
+	bool compare(const T& x, const T& y) const { return x > y; };
+};
+
+
+template<class T>
 class MinMaxHeap
 {
 	std::vector<T> *heap;
@@ -36,18 +66,12 @@ class MinMaxHeap
 	LevelType last_level_type;
 
 	void _sift_up(size_t, LevelType);
-	void _sift_up_min(size_t);
-	void _sift_up_max(size_t);
+	template<typename SiftFunctor> void _sift_up(size_t);
 
 	void _sift_down(size_t, LevelType);
-	void _sift_down_min(size_t);
-	void _sift_down_max(size_t);
+	template<typename SiftFunctor> void _sift_down(size_t);
 
 	size_t _max_idx() const;
-	size_t _min_child_idx(size_t) const;
-	size_t _max_child_idx(size_t) const;
-	size_t _min_grandchild_idx(size_t) const;
-	size_t _max_grandchild_idx(size_t) const;
 
 public:
 	MinMaxHeap();
@@ -79,7 +103,7 @@ MinMaxHeap<T>::MinMaxHeap() :
 template<class T>
 MinMaxHeap<T>::MinMaxHeap(const MinMaxHeap<T> &h) :
 	heap(new std::vector<T>(*h.heap)),
-	last_level_type(_MAX_LEVEL)
+	last_level_type(h.last_level_type)
 {
 }
 
@@ -195,44 +219,39 @@ void MinMaxHeap<T>::_sift_up(size_t i, LevelType level_type)
 	{
 		if(_HAS_PARENT(i) && heap_i > (_HEAP[j = _PARENT_IDX(i)]))
 		{
+			// If this element is on a min level and its parent is smaller,
+			// exchange them and bubble the element up with > (as it is now on
+			// a max level).
 			std::swap(_HEAP[i], _HEAP[j]);
-			this->_sift_up_max(j);
+			this->_sift_up<GreaterFunctor<T>>(j);
 		}
 		else
-			this->_sift_up_min(i);
+			this->_sift_up<LessFunctor<T>>(i);
 	}
 	else
 	{
 		if(_HAS_PARENT(i) && heap_i < (_HEAP[j = _PARENT_IDX(i)]))
 		{
 			std::swap(_HEAP[i], _HEAP[j]);
-			this->_sift_up_min(j);
+			this->_sift_up<LessFunctor<T>>(j);
 		}
 		else
-			this->_sift_up_max(i);
+			this->_sift_up<GreaterFunctor<T>>(i);
 	}
 }
 
-template<class T>
-void MinMaxHeap<T>::_sift_up_min(size_t i)
+template<class T> template<typename SiftFunctor>
+void MinMaxHeap<T>::_sift_up(size_t i)
 {
 	size_t j;
 	T heap_i = _HEAP[i];
+	SiftFunctor func(_HEAP);
 
-	while(_HAS_GRANDPARENT(i) && heap_i < (_HEAP[j = _GRANDPARENT_IDX(i)]))
-	{
-		std::swap(_HEAP[i], _HEAP[j]);
-		i = j;
-	}
-}
-
-template<class T>
-void MinMaxHeap<T>::_sift_up_max(size_t i)
-{
-	size_t j;
-	T heap_i = _HEAP[i];
-
-	while(_HAS_GRANDPARENT(i) && heap_i > (_HEAP[j = _GRANDPARENT_IDX(i)]))
+	// Keep moving the element upwards on the same type of levels, restoring at
+	// each move the min-max heap invariant for the subtree rooted at i. Once
+	// the condition is no longer broken, we can safely stop.
+	while(	_HAS_GRANDPARENT(i) &&
+		func.compare(heap_i, _HEAP[j = _GRANDPARENT_IDX(i)]))
 	{
 		std::swap(_HEAP[i], _HEAP[j]);
 		i = j;
@@ -249,7 +268,7 @@ T MinMaxHeap<T>::extract_min()
 	this->heap->erase(this->heap->begin() + _LAST_IDX);
 	if(_NEW_LEVEL_AT(_LAST_IDX+1))
 		this->last_level_type = !this->last_level_type;
-	this->_sift_down_min(0);
+	this->_sift_down<LessFunctor<T>>(0);
 
 	return min;
 }
@@ -265,7 +284,7 @@ T MinMaxHeap<T>::extract_max()
 	this->heap->erase(this->heap->begin() + _LAST_IDX);
 	if(_NEW_LEVEL_AT(_LAST_IDX+1))
 		this->last_level_type = !this->last_level_type;
-	this->_sift_down_max(max_idx);
+	this->_sift_down<GreaterFunctor<T>>(max_idx);
 
 	return max;
 }
@@ -274,115 +293,67 @@ template<class T>
 void MinMaxHeap<T>::_sift_down(size_t i, LevelType level_type)
 {
 	if(level_type == _MIN_LEVEL)
-		this->_sift_down_min(i);
+		this->_sift_down<LessFunctor<T>>(i);
 	else
-		this->_sift_down_max(i);
+		this->_sift_down<GreaterFunctor<T>>(i);
 }
 
-template<class T>
-void MinMaxHeap<T>::_sift_down_min(size_t i)
+template<class T> template<typename SiftFunctor>
+void MinMaxHeap<T>::_sift_down(size_t i)
 {
 	size_t j;
 	T heap_i = _HEAP[i];
+	SiftFunctor func(_HEAP);
 
+	// As on siftp_up, we keep moving the element downwards on the same type of
+	// levels. However, to ensure the min-max heap invariant is restored at
+	// each step, we now have to retrieve the lowest/greatest grandchildren
+	// (depending on which functor is activated) and swap with it if the
+	// condition does not hold.
 	while(	_HAS_GRANDCHILDREN(i) &&
-		heap_i > (_HEAP[j = this->_min_grandchild_idx(i)]))
+		func.compare(_HEAP[j = func.grandchild_idx(i)], heap_i))
 	{
 		std::swap(_HEAP[i], _HEAP[j]);
 		i = j;
 
-		if(heap_i > _HEAP[j =_PARENT_IDX(i)])
+		if(func.compare(_HEAP[j =_PARENT_IDX(i)], heap_i))
 			std::swap(_HEAP[i], _HEAP[j]);
 	}
 
+	// If we reach the second-to-last level of the tree, we need to check the
+	// base level to ensure that element is indeed the lowest/greatest in its
+	// subtree.
 	if(	_HAS_CHILDREN(i) &&
-		heap_i > (_HEAP[j = this->_min_child_idx(i)]))
+		func.compare(_HEAP[j = func.child_idx(i)], heap_i))
 		std::swap(_HEAP[i], _HEAP[j]);
 }
 
 template<class T>
-void MinMaxHeap<T>::_sift_down_max(size_t i)
+size_t SiftFunctor<T>::grandchild_idx(size_t i) const
 {
-	size_t j;
-	T heap_i = _HEAP[i];
+	size_t j, m, n = this->v.size();
+	j = m = 4*i + 3;
 
-	while(	_HAS_GRANDCHILDREN(i) &&
-		heap_i < (_HEAP[j = this->_max_grandchild_idx(i)]))
-	{
-		std::swap(_HEAP[i], _HEAP[j]);
-		i = j;
+	if(++j < n && this->compare(this->v[j], this->v[m]))
+		m = j;
+	if(++j < n && this->compare(this->v[j], this->v[m]))
+		m = j;
+	if(++j < n && this->compare(this->v[j], this->v[m]))
+		m = j;
 
-		if(heap_i < _HEAP[j =_PARENT_IDX(i)])
-			std::swap(_HEAP[i], _HEAP[j]);
-	}
-
-	if(	_HAS_CHILDREN(i) &&
-		heap_i < (_HEAP[j = this->_max_child_idx(i)]))
-		std::swap(_HEAP[i], _HEAP[j]);
+	return m;
 }
 
 template<class T>
-size_t MinMaxHeap<T>::_min_child_idx(size_t i) const
+size_t SiftFunctor<T>::child_idx(size_t i) const
 {
-	assert(_HAS_CHILDREN(i));
+	size_t j, m, n = this->v.size();
+	j = m = 2*i + 1;
 
-	size_t j, min, n = this->heap->size();
-	j = min = 2*i + 1;
+	if(++j < n && this->compare(this->v[j], this->v[m]))
+		m = j;
 
-	if(++j < n && _HEAP[min] > _HEAP[j])
-		min = j;
-
-	return min;
-}
-
-template<class T>
-size_t MinMaxHeap<T>::_max_child_idx(size_t i) const
-{
-	assert(_HAS_CHILDREN(i));
-
-	size_t j, max, n = this->heap->size();
-	j = max = 2*i + 1;
-
-	if(++j < n && _HEAP[max] < _HEAP[j])
-		max = j;
-
-	return max;
-}
-
-template<class T>
-size_t MinMaxHeap<T>::_min_grandchild_idx(size_t i) const
-{
-	assert(_HAS_GRANDCHILDREN(i));
-
-	size_t j, min, n = this->heap->size();
-	j = min = 4*i + 3;
-
-	if(++j < n && _HEAP[min] > _HEAP[j])
-		min = j;
-	if(++j < n && _HEAP[min] > _HEAP[j])
-		min = j;
-	if(++j < n && _HEAP[min] > _HEAP[j])
-		min = j;
-
-	return min;
-}
-
-template<class T>
-size_t MinMaxHeap<T>::_max_grandchild_idx(size_t i) const
-{
-	assert(_HAS_GRANDCHILDREN(i));
-
-	size_t j, max, n = this->heap->size();
-	j = max = 4*i + 3;
-
-	if(++j < n && _HEAP[max] < _HEAP[j])
-		max = j;
-	if(++j < n && _HEAP[max] < _HEAP[j])
-		max = j;
-	if(++j < n && _HEAP[max] < _HEAP[j])
-		max = j;
-
-	return max;
+	return m;
 }
 
 #endif
