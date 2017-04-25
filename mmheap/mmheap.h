@@ -305,9 +305,9 @@ void MinMaxHeap<T>::_sift_down(size_t i)
 	T heap_i = _HEAP[i];
 	SiftFunctor func(_HEAP);
 
-	// As on siftp_up, we keep moving the element downwards on the same type of
+	// As on sift_up, we keep moving the element downwards on the same type of
 	// levels. However, to ensure the min-max heap invariant is restored at
-	// each step, we now have to retrieve the lowest/greatest grandchildren
+	// each step, we now have to retrieve the lowest/greatest grandchild
 	// (depending on which functor is activated) and swap with it if the
 	// condition does not hold.
 	while(	_HAS_GRANDCHILDREN(i) &&
